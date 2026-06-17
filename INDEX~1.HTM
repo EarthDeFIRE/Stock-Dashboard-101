@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Valuation Dashboard</title>
+<style>
+  :root{
+    --bg:#0b1120; --panel:#111a2e; --panel2:#0f1729; --line:#1e293b;
+    --text:#e2e8f0; --muted:#94a3b8; --accent:#0ea5e9; --green:#22c55e; --red:#ef4444;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,"Noto Sans Thai",sans-serif;
+       background:var(--bg);color:var(--text);line-height:1.5}
+  a{color:var(--accent);text-decoration:none}
+  .wrap{max-width:1200px;margin:0 auto;padding:20px 16px 60px}
+  /* Header */
+  header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:18px 0;border-bottom:1px solid var(--line)}
+  header img.logo{width:56px;height:56px;border-radius:14px;object-fit:cover}
+  .brand h1{margin:0;font-size:22px}
+  .brand p{margin:2px 0 0;color:var(--muted);font-size:14px}
+  .header-right{margin-left:auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .links a{font-size:13px;margin-left:10px;color:var(--muted)}
+  .links a:hover{color:var(--accent)}
+  .status{font-size:12px;color:var(--muted);text-align:right}
+  .status .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  .live .dot{background:var(--green)} .demo .dot{background:#f59e0b}
+  button.refresh{background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer}
+  button.refresh:hover{filter:brightness(1.1)}
+  /* Table */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-top:22px;overflow:hidden}
+  .card h2{font-size:15px;margin:0;padding:14px 18px;border-bottom:1px solid var(--line);color:var(--muted);font-weight:600;letter-spacing:.3px}
+  .table-scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:920px}
+  th,td{padding:11px 12px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--panel2)}
+  th:hover{color:var(--text)}
+  th.sym,td.sym{text-align:left;position:sticky;left:0;background:var(--panel)}
+  th.sym{background:var(--panel2)}
+  tbody tr:hover td{background:#16223c}
+  tbody tr:hover td.sym{background:#16223c}
+  .sym .ticker{font-weight:700}
+  .sym .co{display:block;color:var(--muted);font-size:11px;font-weight:400}
+  .pos{color:var(--green)} .neg{color:var(--red)}
+  .price{font-weight:700}
+  td.na{color:#475569}
+  /* Promotions */
+  .promos{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:22px}
+  .promo{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+  .promo img{width:100%;height:150px;object-fit:cover;display:block}
+  .promo .body{padding:14px 16px;flex:1;display:flex;flex-direction:column}
+  .promo h3{margin:0 0 6px;font-size:16px}
+  .promo p{margin:0 0 14px;color:var(--muted);font-size:13.5px;flex:1}
+  .promo .cta{align-self:flex-start;background:var(--accent);color:#fff;padding:8px 16px;border-radius:8px;font-size:13px}
+  footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;text-align:center}
+  .err{background:#3f1d1d;border:1px solid #7f1d1d;color:#fecaca;padding:10px 14px;border-radius:8px;margin-top:16px;font-size:13px;display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img class="logo" id="logo" alt="logo">
+    <div class="brand">
+      <h1 id="brandName">Loading…</h1>
+      <p id="tagline"></p>
+    </div>
+    <div class="header-right">
+      <div class="links" id="links"></div>
+      <button class="refresh" onclick="loadData(true)">↻ รีเฟรช</button>
+      <div class="status" id="status"><span class="dot"></span><span id="statusText">—</span></div>
+    </div>
+  </header>
+
+  <div class="err" id="err"></div>
+
+  <div class="card">
+    <h2>10 Valuation Metrics — คลิกหัวคอลัมน์เพื่อเรียงลำดับ</h2>
+    <div class="table-scroll">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th class="sym" data-k="symbol">หุ้น</th>
+            <th data-k="price">ราคา</th>
+            <th data-k="changePct">% วัน</th>
+            <th data-k="peTTM">P/E</th>
+            <th data-k="forwardPE">Fwd P/E</th>
+            <th data-k="pb">P/B</th>
+            <th data-k="psTTM">P/S</th>
+            <th data-k="peg">PEG</th>
+            <th data-k="evEbitda">EV/EBITDA</th>
+            <th data-k="evSales">EV/Sales</th>
+            <th data-k="divYield">Div %</th>
+            <th data-k="roe">ROE %</th>
+            <th data-k="netMargin">Net Margin %</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="promos" id="promos"></div>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+let CONTENT = null, ROWS = [], sortKey = null, sortDir = 1;
+
+// ---- โหลด config ที่ผู้ใช้แก้เอง ----
+async function loadContent(){
+  CONTENT = await (await fetch('content.json?_=' + Date.now())).json();
+  const b = CONTENT.brand || {};
+  if(b.accentColor) document.documentElement.style.setProperty('--accent', b.accentColor);
+  document.getElementById('logo').src = b.logoUrl || '';
+  document.getElementById('brandName').textContent = b.name || 'Dashboard';
+  document.getElementById('tagline').textContent = b.tagline || '';
+  document.title = (b.name || 'Stock') + ' — Dashboard';
+  document.getElementById('links').innerHTML =
+    (CONTENT.links||[]).map(l=>`<a href="${l.url}" target="_blank" rel="noopener">${l.label}</a>`).join('');
+  document.getElementById('footer').textContent = CONTENT.footerNote || '';
+  renderPromos();
+}
+
+function renderPromos(){
+  document.getElementById('promos').innerHTML = (CONTENT.promotions||[]).map(p=>`
+    <div class="promo">
+      ${p.imageUrl?`<img src="${p.imageUrl}" alt="">`:''}
+      <div class="body">
+        <h3>${p.title||''}</h3>
+        <p>${p.description||''}</p>
+        ${p.linkUrl?`<a class="cta" href="${p.linkUrl}" target="_blank" rel="noopener">${p.linkText||'ดูเพิ่มเติม'}</a>`:''}
+      </div>
+    </div>`).join('');
+}
+
+// ---- โหลดข้อมูลหุ้น: ลอง API จริงก่อน ไม่ได้ค่อย fallback sample ----
+async function loadData(force){
+  const symbols = (CONTENT.watchlist||[]).map(w=>w.symbol).join(',');
+  let data = null;
+  try{
+    const r = await fetch('/api/data?symbols=' + encodeURIComponent(symbols) + (force?'&_='+Date.now():''));
+    if(!r.ok) throw new Error('api ' + r.status);
+    data = await r.json();
+    setStatus('live', 'ข้อมูลจริง • อัปเดต ' + fmtTime(data.updatedAt));
+  }catch(e){
+    try{
+      data = await (await fetch('sample-data.json?_=' + Date.now())).json();
+      setStatus('demo', 'โหมดตัวอย่าง (ยังไม่ deploy / ไม่มี API key) • ' + fmtTime(data.updatedAt));
+    }catch(e2){
+      showErr('โหลดข้อมูลไม่ได้: ' + e2.message); return;
+    }
+  }
+  // ผูกชื่อบริษัทจาก content
+  const names = {}; (CONTENT.watchlist||[]).forEach(w=>names[w.symbol]=w.name);
+  ROWS = (data.stocks||[]).map(s=>({...s, name: names[s.symbol]||''}));
+  render();
+}
+
+function setStatus(cls, text){
+  const el = document.getElementById('status');
+  el.className = 'status ' + cls;
+  document.getElementById('statusText').textContent = text;
+}
+function showErr(m){const e=document.getElementById('err');e.style.display='block';e.textContent=m;}
+function fmtTime(iso){ if(!iso) return ''; const d=new Date(iso);
+  return d.toLocaleString('th-TH',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
+
+const fmt = (v,d=2)=> (v===null||v===undefined||isNaN(v)) ? null : Number(v).toFixed(d);
+
+function render(){
+  let rows = [...ROWS];
+  if(sortKey){
+    rows.sort((a,b)=>{
+      let x=a[sortKey], y=b[sortKey];
+      if(sortKey==='symbol'){return (x>y?1:-1)*sortDir;}
+      if(x===null||x===undefined||isNaN(x)) return 1;
+      if(y===null||y===undefined||isNaN(y)) return -1;
+      return (x-y)*sortDir;
+    });
+  }
+  const cell=(v,d=2)=>{const f=fmt(v,d); return f===null?'<td class="na">—</td>':`<td>${f}</td>`;};
+  document.getElementById('tbody').innerHTML = rows.map(s=>{
+    const ch = s.changePct, chCls = ch>=0?'pos':'neg', chTxt = (ch>=0?'+':'')+fmt(ch,2)+'%';
+    return `<tr>
+      <td class="sym"><span class="ticker">${s.symbol}</span><span class="co">${s.name||''}</span></td>
+      <td class="price">${fmt(s.price,2)??'—'}</td>
+      <td class="${chCls}">${chTxt}</td>
+      ${cell(s.peTTM)}${cell(s.forwardPE)}${cell(s.pb)}${cell(s.psTTM)}${cell(s.peg)}
+      ${cell(s.evEbitda)}${cell(s.evSales)}${cell(s.divYield)}${cell(s.roe,1)}${cell(s.netMargin,1)}
+    </tr>`;
+  }).join('');
+}
+
+document.querySelectorAll('#tbl th').forEach(th=>{
+  th.addEventListener('click',()=>{
+    const k=th.dataset.k;
+    if(sortKey===k) sortDir*=-1; else {sortKey=k; sortDir = (k==='symbol')?1:-1;}
+    render();
+  });
+});
+
+(async()=>{ await loadContent(); await loadData(); })();
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "_comment": "ข้อมูลตัวอย่างสำหรับ demo ตอนเปิดเครื่อง (offline). เมื่อ deploy บน Vercel แล้ว เว็บจะดึงข้อมูลจริงจาก /api/data แทนไฟล์นี้อัตโนมัติ",
+  "updatedAt": "2026-06-11T06:00:00Z",
+  "source": "sample",
+  "stocks": [
+    { "symbol": "AAPL",  "price": 214.30, "changePct": 0.82,  "peTTM": 33.1, "forwardPE": 29.4, "pb": 49.2, "psTTM": 8.6,  "peg": 2.9, "evEbitda": 24.8, "evSales": 8.4,  "divYield": 0.46, "roe": 147.3, "netMargin": 25.3 },
+    { "symbol": "MSFT",  "price": 467.10, "changePct": 1.21,  "peTTM": 37.8, "forwardPE": 31.2, "pb": 13.1, "psTTM": 13.0, "peg": 2.4, "evEbitda": 25.1, "evSales": 12.6, "divYield": 0.68, "roe": 35.1,  "netMargin": 36.0 },
+    { "symbol": "GOOGL", "price": 178.45, "changePct": -0.34, "peTTM": 24.6, "forwardPE": 21.8, "pb": 6.9,  "psTTM": 6.7,  "peg": 1.3, "evEbitda": 17.2, "evSales": 6.2,  "divYield": 0.45, "roe": 30.8,  "netMargin": 27.7 },
+    { "symbol": "NVDA",  "price": 131.20, "changePct": 2.95,  "peTTM": 54.3, "forwardPE": 33.6, "pb": 48.5, "psTTM": 28.1, "peg": 1.1, "evEbitda": 45.9, "evSales": 27.4, "divYield": 0.03, "roe": 119.2, "netMargin": 55.0 },
+    { "symbol": "AMZN",  "price": 207.80, "changePct": 0.55,  "peTTM": 44.7, "forwardPE": 33.1, "pb": 8.2,  "psTTM": 3.6,  "peg": 1.6, "evEbitda": 20.4, "evSales": 3.5,  "divYield": 0.00, "roe": 22.4,  "netMargin": 8.0 },
+    { "symbol": "META",  "price": 712.90, "changePct": -1.02, "peTTM": 28.1, "forwardPE": 24.3, "pb": 9.4,  "psTTM": 10.2, "peg": 1.4, "evEbitda": 18.6, "evSales": 9.8,  "divYield": 0.29, "roe": 36.1,  "netMargin": 37.6 },
+    { "symbol": "TSLA",  "price": 328.50, "changePct": 3.41,  "peTTM": 71.5, "forwardPE": 88.2, "pb": 13.8, "psTTM": 11.0, "peg": 4.2, "evEbitda": 60.3, "evSales": 10.6, "divYield": 0.00, "roe": 20.5,  "netMargin": 13.4 },
+    { "symbol": "BRK.B", "price": 478.20, "changePct": 0.18,  "peTTM": 13.2, "forwardPE": 22.6, "pb": 1.6,  "psTTM": 2.8,  "peg": null, "evEbitda": 18.9, "evSales": 2.7,  "divYield": 0.00, "roe": 12.1,  "netMargin": 22.0 }
+  ]
+}

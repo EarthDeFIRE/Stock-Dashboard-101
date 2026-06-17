@@ -1,0 +1,46 @@
+{
+  "_comment": "===== แก้ไฟล์นี้ได้เองโดยไม่ต้องแตะโค้ด — เปลี่ยนชื่อ, โลโก้, หุ้นที่ติดตาม, ลิงก์, โปรโมชัน =====",
+
+  "brand": {
+    "name": "EarthDeFIRE",
+    "tagline": "10 Valuation Metrics Dashboard — US & Global Stocks",
+    "logoUrl": "https://placehold.co/120x120/0ea5e9/ffffff?text=ED",
+    "accentColor": "#0ea5e9"
+  },
+
+  "watchlist": [
+    { "symbol": "AAPL",  "name": "Apple Inc." },
+    { "symbol": "MSFT",  "name": "Microsoft Corp." },
+    { "symbol": "GOOGL", "name": "Alphabet Inc." },
+    { "symbol": "NVDA",  "name": "NVIDIA Corp." },
+    { "symbol": "AMZN",  "name": "Amazon.com Inc." },
+    { "symbol": "META",  "name": "Meta Platforms" },
+    { "symbol": "TSLA",  "name": "Tesla Inc." },
+    { "symbol": "BRK.B", "name": "Berkshire Hathaway" }
+  ],
+
+  "promotions": [
+    {
+      "title": "📈 คอร์สวิเคราะห์งบการเงิน",
+      "description": "เรียนอ่านงบ + ประเมินมูลค่าหุ้นด้วย 10 metric ที่ใช้ในเว็บนี้",
+      "imageUrl": "https://placehold.co/600x300/1e293b/0ea5e9?text=Course",
+      "linkUrl": "https://example.com/course",
+      "linkText": "ดูรายละเอียด"
+    },
+    {
+      "title": "💬 เข้ากลุ่ม Community",
+      "description": "พูดคุยแลกเปลี่ยนไอเดียการลงทุนกับเพื่อนๆ",
+      "imageUrl": "https://placehold.co/600x300/1e293b/22c55e?text=Community",
+      "linkUrl": "https://example.com/community",
+      "linkText": "เข้าร่วมฟรี"
+    }
+  ],
+
+  "links": [
+    { "label": "YouTube", "url": "https://youtube.com/@yourchannel" },
+    { "label": "X / Twitter", "url": "https://x.com/yourhandle" },
+    { "label": "ติดต่อ", "url": "mailto:earthdefire@gmail.com" }
+  ],
+
+  "footerNote": "ข้อมูลเพื่อการศึกษาเท่านั้น ไม่ใช่คำแนะนำการลงทุน • Data: Finnhub"
+}
