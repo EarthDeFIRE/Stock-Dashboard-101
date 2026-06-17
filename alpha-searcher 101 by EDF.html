@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALPHA SEARCHER — Composite Equity Screener</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0908; --panel:#14110F; --panel2:#1A1613; --line:#2A241F;
+    --gold:#C9A961; --gold-dim:#8A7544;
+    --ink:#E8E4DD; --mute:#8A8178; --faint:#5A544C;
+    --S:#C9A961; --A:#5FB888; --B:#7CA5C9; --C:#C99A5F; --D:#C96B5F;
+    --green:#4FA877; --red:#C25B4E; --amber:#C99A5F;
+    --good:#2E7D54; --bad:#8B3A30;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;-webkit-font-smoothing:antialiased}
+  body{padding:0 0 80px}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .wrap{max-width:1320px;margin:0 auto;padding:0 22px}
+
+  /* ===== Masthead ===== */
+  header.mast{border-bottom:1px solid var(--line);padding:26px 0 20px;margin-bottom:18px;position:relative;overflow:hidden}
+  .mast .eyebrow{font-family:'JetBrains Mono';font-size:10.5px;letter-spacing:.32em;color:var(--gold-dim);text-transform:uppercase;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .mast .eyebrow .dot{width:5px;height:5px;border-radius:50%;background:var(--gold);display:inline-block}
+  .mast h1{font-family:'Fraunces';font-weight:900;font-size:clamp(38px,6vw,72px);line-height:.92;letter-spacing:-.02em;margin:10px 0 8px}
+  .mast h1 .amp{color:var(--gold);font-style:italic;font-weight:500}
+  .mast .sub{color:var(--mute);font-size:14px;max-width:640px;line-height:1.5}
+  .mast .sub b{color:var(--ink);font-weight:600}
+  .ticker-tape{position:absolute;top:18px;right:0;font-family:'JetBrains Mono';font-size:10px;color:var(--faint);text-align:right;line-height:1.7;display:none}
+  @media(min-width:920px){.ticker-tape{display:block}}
+
+  /* ===== Strategy bar ===== */
+  .strat-section{margin-bottom:14px}
+  .label{font-family:'JetBrains Mono';font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);margin-bottom:9px;display:flex;align-items:center;gap:8px}
+  .label::before{content:"";width:14px;height:1px;background:var(--gold-dim)}
+  .strat-chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{font-family:'IBM Plex Sans';font-size:12.5px;font-weight:500;padding:7px 13px;border:1px solid var(--line);background:var(--panel);color:var(--mute);border-radius:2px;cursor:pointer;transition:.13s;white-space:nowrap;display:flex;flex-direction:column;gap:1px;line-height:1.15}
+  .chip small{font-family:'JetBrains Mono';font-size:8.5px;letter-spacing:.05em;color:var(--faint)}
+  .chip:hover{border-color:var(--gold-dim);color:var(--ink)}
+  .chip.on{background:linear-gradient(180deg,#1e1a14,#14110F);border-color:var(--gold);color:var(--gold)}
+  .chip.on small{color:var(--gold-dim)}
+
+  /* ===== Filters ===== */
+  .filters{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:16px 18px;margin-bottom:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px 22px;align-items:end}
+  .fld{display:flex;flex-direction:column;gap:6px}
+  .fld>span{font-family:'JetBrains Mono';font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .fld input[type=text],.fld select{background:var(--bg);border:1px solid var(--line);color:var(--ink);font-family:'IBM Plex Sans';font-size:13px;padding:8px 10px;border-radius:2px;width:100%}
+  .fld input[type=text]:focus,.fld select:focus{outline:none;border-color:var(--gold-dim)}
+  .fld select{cursor:pointer}
+  .rng{display:flex;align-items:center;gap:9px}
+  .rng input[type=range]{flex:1;accent-color:var(--gold);height:3px}
+  .rng .val{font-family:'JetBrains Mono';font-size:12px;color:var(--gold);min-width:42px;text-align:right}
+  .drop-presets{display:flex;gap:5px;grid-column:1/-1;flex-wrap:wrap}
+  .dp{font-family:'JetBrains Mono';font-size:10px;padding:5px 9px;border:1px solid var(--line);background:var(--bg);color:var(--mute);border-radius:2px;cursor:pointer;transition:.12s}
+  .dp:hover{border-color:var(--gold-dim);color:var(--ink)}
+  .dp.on{background:#231d14;border-color:var(--gold);color:var(--gold)}
+  .reset{font-family:'JetBrains Mono';font-size:10px;color:var(--faint);cursor:pointer;text-decoration:underline;text-underline-offset:3px;background:none;border:none;padding:4px 0}
+  .reset:hover{color:var(--gold)}
+
+  /* ===== KPI strip ===== */
+  .kpi-strip{display:flex;gap:0;border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-bottom:16px;flex-wrap:wrap}
+  .kpi{flex:1;min-width:96px;padding:12px 15px;border-right:1px solid var(--line);background:var(--panel)}
+  .kpi:last-child{border-right:none}
+  .kpi .n{font-family:'Fraunces';font-weight:600;font-size:26px;line-height:1}
+  .kpi .l{font-family:'JetBrains Mono';font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-top:5px}
+  .kpi.tS .n{color:var(--S)} .kpi.tA .n{color:var(--A)} .kpi.tB .n{color:var(--B)} .kpi.tC .n{color:var(--C)} .kpi.tD .n{color:var(--D)}
+
+  /* ===== Table ===== */
+  .tbl-wrap{border:1px solid var(--line);border-radius:3px;overflow-x:auto;background:var(--panel)}
+  table{border-collapse:collapse;width:100%;min-width:980px;font-size:13px}
+  thead th{font-family:'JetBrains Mono';font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:500;text-align:right;padding:13px 11px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--panel2);z-index:2}
+  thead th:hover{color:var(--gold)}
+  thead th.l{text-align:left}
+  thead th .ar{color:var(--gold);font-size:8px}
+  tbody td{padding:11px;text-align:right;border-bottom:1px solid #211c17;white-space:nowrap}
+  tbody tr{cursor:pointer;transition:background .1s}
+  tbody tr:hover{background:var(--panel2)}
+  tbody tr.sel{background:#1d1812;box-shadow:inset 3px 0 0 var(--gold)}
+  td.rank{color:var(--faint);font-family:'JetBrains Mono';font-size:11px;text-align:center;width:30px}
+  td.tk{text-align:left}
+  td.tk .sym{font-family:'JetBrains Mono';font-weight:700;font-size:14px;color:var(--ink);letter-spacing:.02em}
+  td.tk .nm{font-size:11px;color:var(--mute);margin-top:1px;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+  td.sec{text-align:left;font-size:11px;color:var(--mute)}
+  .tier-badge{font-family:'Fraunces';font-weight:900;font-size:16px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:2px;line-height:1}
+  .b-S{background:rgba(201,169,97,.16);color:var(--S);border:1px solid rgba(201,169,97,.4)}
+  .b-A{background:rgba(95,184,136,.14);color:var(--A);border:1px solid rgba(95,184,136,.35)}
+  .b-B{background:rgba(124,165,201,.13);color:var(--B);border:1px solid rgba(124,165,201,.32)}
+  .b-C{background:rgba(201,154,95,.13);color:var(--C);border:1px solid rgba(201,154,95,.32)}
+  .b-D{background:rgba(201,107,95,.13);color:var(--D);border:1px solid rgba(201,107,95,.3)}
+  td.alpha .av{font-family:'JetBrains Mono';font-weight:700;font-size:15px}
+  .fbar{display:inline-flex;flex-direction:column;align-items:flex-end;gap:3px;width:46px}
+  .fbar .fn{font-family:'JetBrains Mono';font-size:10.5px;font-weight:500}
+  .fbar .ft{width:100%;height:3px;background:#241f19;border-radius:2px;overflow:hidden}
+  .fbar .ft i{display:block;height:100%}
+  .pos{color:var(--green)} .neg{color:var(--red)} .neu{color:var(--mute)}
+  td.rs .rsv{font-family:'JetBrains Mono';font-weight:700;font-size:13px}
+  .ipo-tag{font-family:'JetBrains Mono';font-size:8px;background:var(--gold-dim);color:#0A0908;padding:1px 4px;border-radius:2px;margin-left:5px;vertical-align:middle;font-weight:700}
+  .empty{padding:50px 20px;text-align:center;color:var(--mute);font-size:14px}
+
+  /* ===== Drill-down ===== */
+  #drill{margin-top:20px;display:none}
+  .dpanel{border:1px solid var(--gold-dim);border-radius:4px;background:linear-gradient(180deg,#161109,#120f0c);overflow:hidden}
+  .dhead{padding:20px 24px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
+  .dhead .left{display:flex;gap:16px;align-items:center}
+  .dhead .tier-badge{font-size:26px;width:50px;height:50px}
+  .dhead .sym{font-family:'Fraunces';font-weight:900;font-size:32px;line-height:1}
+  .dhead .nm{font-size:13px;color:var(--mute);margin-top:2px}
+  .dhead .verdict{font-family:'Fraunces';font-weight:600;font-size:20px;margin-top:5px}
+  .dhead .meta{font-family:'JetBrains Mono';font-size:11px;color:var(--mute);margin-top:6px}
+  .dhead .meta b{color:var(--gold)}
+  .dclose{background:none;border:1px solid var(--line);color:var(--mute);font-family:'JetBrains Mono';font-size:11px;padding:6px 12px;border-radius:2px;cursor:pointer}
+  .dclose:hover{border-color:var(--gold-dim);color:var(--gold)}
+
+  .factor-row{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+  .fcell{background:var(--panel);padding:14px 16px}
+  .fcell .fl{font-family:'JetBrains Mono';font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  .fcell .fv{font-family:'JetBrains Mono';font-weight:700;font-size:22px;margin:4px 0 7px}
+  .fcell .fb{height:4px;background:#241f19;border-radius:2px;overflow:hidden}
+  .fcell .fb i{display:block;height:100%}
+
+  .swot{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+  .sq{background:var(--panel);padding:18px 20px;min-height:120px}
+  .sq h4{font-family:'IBM Plex Sans';font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;margin-bottom:11px}
+  .sq.str h4{color:var(--A)} .sq.wk h4{color:var(--D)} .sq.opp h4{color:var(--B)} .sq.thr h4{color:var(--amber)}
+  .sq h4 .cnt{font-family:'JetBrains Mono';font-size:10px;color:var(--faint);font-weight:400}
+  .sq ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .sq li{font-size:12.5px;line-height:1.45;color:var(--ink);padding-left:14px;position:relative}
+  .sq li::before{content:"▪";position:absolute;left:0;font-size:8px;top:3px}
+  .sq.str li::before{color:var(--A)} .sq.wk li::before{color:var(--D)} .sq.opp li::before{color:var(--B)} .sq.thr li::before{color:var(--amber)}
+  .sq li b{font-family:'JetBrains Mono';font-weight:700}
+  .sq .none{font-size:12px;color:var(--faint);font-style:italic}
+
+  .keymetrics{padding:18px 20px;border-top:1px solid var(--line)}
+  .keymetrics .label{margin-bottom:13px}
+  .km-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+  .km{background:var(--panel);padding:12px 14px}
+  .km .kl{font-family:'JetBrains Mono';font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .km .kv{font-family:'JetBrains Mono';font-weight:700;font-size:16px;margin-top:4px}
+
+  footer{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);font-size:11.5px;color:var(--faint);line-height:1.6}
+  footer b{color:var(--mute)}
+  .warn{font-size:11px;color:var(--amber);margin-top:8px;line-height:1.5}
+
+  @media(max-width:680px){
+    .wrap{padding:0 14px}
+    .swot{grid-template-columns:1fr}
+    .factor-row{grid-template-columns:repeat(5,1fr)}
+    .fcell{padding:9px 7px} .fcell .fv{font-size:15px}
+    .dhead{padding:16px}
+    .dhead .sym{font-size:24px}
+    .kpi .n{font-size:20px}
+  }
+</style>
+</head>
+<body>
+<header class="mast">
+  <div class="wrap">
+    <div class="ticker-tape" id="tape"></div>
+    <div class="eyebrow"><span class="dot"></span> SYSTEMATIC EQUITY SCREENER · SNAPSHOT 17 JUN 2026 · US UNIVERSE</div>
+    <h1>Alpha <span class="amp">&</span> Searcher</h1>
+    <p class="sub">กรองหุ้นด้วย <b>5 factor scores</b> (Growth · Quality · Value · Momentum · Risk Shield) แบบ percentile rank — ผสมเป็น <b>Alpha Score</b> ตาม strategy ที่เลือก แล้วจัด <b>S→D tier</b> · คลิกหุ้นเพื่อดู SWOT + งบการเงินแบบอ่านง่าย</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- Strategy selector -->
+  <div class="strat-section">
+    <div class="label">Strategy Engine — เลือกสูตรถ่วงน้ำหนัก (10 สูตร)</div>
+    <div class="strat-chips" id="stratChips"></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <label class="fld"><span>ค้นหา Ticker / ชื่อ</span><input type="text" id="fSearch" placeholder="เช่น NVDA, Nvidia, semi…"></label>
+    <label class="fld"><span>Sector</span><select id="fSector"><option value="">ทั้งหมด</option></select></label>
+    <label class="fld"><span>Min Market Cap ($B)</span><div class="rng"><input type="range" id="fMcap" min="0" max="1000" step="10" value="0"><span class="val" id="fMcapV">0</span></div></label>
+    <label class="fld"><span>Max P/E (fwd)</span><div class="rng"><input type="range" id="fPe" min="5" max="200" step="5" value="200"><span class="val" id="fPeV">∞</span></div></label>
+    <label class="fld"><span>Min RS</span><div class="rng"><input type="range" id="fRs" min="0" max="99" step="1" value="0"><span class="val" id="fRsV">0</span></div></label>
+    <label class="fld"><span>Min Tier</span><select id="fTier"><option value="0">ทุก tier</option><option value="58">B+ ขึ้นไป</option><option value="70">A+ ขึ้นไป</option><option value="82">S เท่านั้น</option></select></label>
+    <div class="drop-presets">
+      <span style="font-family:'JetBrains Mono';font-size:9.5px;color:var(--faint);align-self:center;letter-spacing:.1em;text-transform:uppercase;margin-right:4px">ร่วงจาก 52W High:</span>
+      <button class="dp" data-min="0" data-max="100">ทั้งหมด</button>
+      <button class="dp" data-min="0" data-max="10">ใกล้ high ≤10%</button>
+      <button class="dp" data-min="10" data-max="20">Minor Dip 10–20%</button>
+      <button class="dp" data-min="20" data-max="30">Dip 20–30%</button>
+      <button class="dp on" data-min="0" data-max="100" id="dpAll">—</button>
+      <button class="dp" data-min="30" data-max="50">Correction 30–50%</button>
+      <button class="dp" data-min="50" data-max="100">Bear 50%+</button>
+      <button class="reset" id="resetBtn" style="margin-left:auto">↺ reset ทั้งหมด</button>
+    </div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="kpi-strip" id="kpis"></div>
+
+  <!-- Table -->
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr id="thead"></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Drill-down -->
+  <div id="drill"></div>
+
+  <footer>
+    <b>วิธีอ่าน:</b> Factor score = percentile rank 0–100 เทียบทั้ง universe (ยิ่งสูงยิ่งดีในมิตินั้น) · <b>Alpha Score</b> = ผลรวมถ่วงน้ำหนักตาม strategy · Tier: <span style="color:var(--S)">S ≥82</span> · <span style="color:var(--A)">A 70–81</span> · <span style="color:var(--B)">B 58–69</span> · <span style="color:var(--C)">C 45–57</span> · <span style="color:var(--D)">D &lt;45</span>
+    <div class="warn">⚠ ข้อมูลเป็น <b>snapshot ตัวอย่าง (~mid-Jun 2026)</b> — ตัวเลข mega-cap อิงสกรีนช็อต Bastion/Vestly ที่ส่งมา ส่วนที่เหลือเป็นค่าประมาณเชิงสาธิต ห้ามใช้ตัดสินใจลงทุนจริงโดยไม่ verify · ต่อ live feed (Yahoo/eToro/n8n) เพื่อใช้งานจริง · เครื่องมือช่วยคัดกรอง ไม่ใช่คำแนะนำลงทุน</div>
+  </footer>
+</div>
+
+<script>
+/* =========================================================
+   DATASET — snapshot ~mid-Jun 2026 (US universe)
+   fields: t,n,s,mc($B),px,hi,d52(neg%),r1m,r3m,r1y,r3y,r5y,
+   rg5,rg3,eg5(null=NA),roe,gm,em,nm,fm,pe,pe3,dy,fy,de,cr,rs,ipo
+   ========================================================= */
+const RAW=[
+ {t:"NVDA",n:"NVIDIA",s:"Technology",mc:5146,px:170,hi:187,d52:-9,r1m:-6,r3m:16,r1y:47,r3y:399,r5y:1097,rg5:65,rg3:35,eg5:80,roe:90,gm:75,em:65,nm:56,fm:47,pe:21,pe3:14,dy:0.5,fy:2.3,de:0.12,cr:4.0,rs:88},
+ {t:"GOOGL",n:"Alphabet",s:"Technology",mc:4495,px:200,hi:222,d52:-10,r1m:-7,r3m:21,r1y:110,r3y:202,r5y:209,rg5:18,rg3:13,eg5:25,roe:32,gm:58,em:38,nm:29,fm:15,pe:29,pe3:22,dy:0.2,fy:1.4,de:0.08,cr:1.8,rs:79},
+ {t:"AAPL",n:"Apple",s:"Technology",mc:4354,px:255,hi:274,d52:-7,r1m:-1,r3m:17,r1y:50,r3y:63,r5y:134,rg5:8,rg3:2,eg5:10,roe:60,gm:46,em:35,nm:27,fm:29,pe:33,pe3:28,dy:0.4,fy:3.0,de:1.5,cr:0.9,rs:74},
+ {t:"MSFT",n:"Microsoft",s:"Technology",mc:2970,px:380,hi:528,d52:-28,r1m:-5,r3m:0,r1y:-16,r3y:20,r5y:62,rg5:14,rg3:12,eg5:15,roe:35,gm:69,em:58,nm:39,fm:23,pe:21,pe3:18,dy:0.9,fy:2.5,de:0.3,cr:1.3,rs:20},
+ {t:"AMZN",n:"Amazon",s:"Consumer",mc:2646,px:220,hi:250,d52:-12,r1m:-7,r3m:16,r1y:14,r3y:96,r5y:44,rg5:12,rg3:12,eg5:35,roe:22,gm:48,em:21,nm:12,fm:0,pe:28,pe3:19,dy:0,fy:-0.1,de:0.5,cr:1.05,rs:51},
+ {t:"SPCX",n:"Space Exploration Tech.",s:"Industrial",mc:2520,px:135,hi:135,d52:0,r1m:20,r3m:20,r1y:20,r3y:20,r5y:20,rg5:60,rg3:60,eg5:null,roe:5,gm:30,em:20,nm:-45,fm:-102,pe:750,pe3:54,dy:0,fy:-0.8,de:0.4,cr:1.5,rs:77,ipo:1},
+ {t:"AVGO",n:"Broadcom",s:"Technology",mc:1874,px:280,hi:350,d52:-20,r1m:-7,r3m:21,r1y:58,r3y:372,r5y:835,rg5:30,rg3:24,eg5:40,roe:60,gm:75,em:56,nm:39,fm:43,pe:23,pe3:15,dy:0.7,fy:1.7,de:1.0,cr:2.5,rs:73},
+ {t:"TSLA",n:"Tesla",s:"Consumer",mc:1544,px:360,hi:440,d52:-18,r1m:-3,r3m:4,r1y:25,r3y:58,r5y:104,rg5:20,rg3:5,eg5:-5,roe:11,gm:18,em:11,nm:4,fm:7,pe:196,pe3:113,dy:0,fy:0.5,de:0.1,cr:1.7,rs:47},
+ {t:"META",n:"Meta Platforms",s:"Technology",mc:1507,px:600,hi:800,d52:-25,r1m:-3,r3m:-5,r1y:-15,r3y:113,r5y:81,rg5:20,rg3:20,eg5:30,roe:33,gm:81,em:51,nm:33,fm:22,pe:17,pe3:14,dy:0.4,fy:3.2,de:0.2,cr:2.5,rs:29},
+ {t:"MU",n:"Micron Technology",s:"Technology",mc:1227,px:220,hi:222,d52:-1,r1m:50,r3m:146,r1y:810,r3y:1529,r5y:1286,rg5:25,rg3:7,eg5:null,roe:28,gm:50,em:63,nm:41,fm:18,pe:10,pe3:10,dy:0.1,fy:0.8,de:0.3,cr:2.8,rs:99},
+ {t:"BRK.B",n:"Berkshire Hathaway",s:"Finance",mc:1068,px:480,hi:500,d52:-4,r1m:3,r3m:1,r1y:1,r3y:44,r5y:74,rg5:7,rg3:7,eg5:6,roe:12,gm:30,em:31,nm:19,fm:6,pe:24,pe3:23,dy:0,fy:0.5,de:0.2,cr:1.5,rs:53},
+ {t:"LLY",n:"Eli Lilly",s:"Healthcare",mc:1007,px:900,hi:940,d52:-4,r1m:12,r3m:14,r1y:41,r3y:158,r5y:436,rg5:32,rg3:32,eg5:30,roe:80,gm:80,em:50,nm:35,fm:16,pe:30,pe3:23,dy:0.6,fy:1.2,de:1.8,cr:1.2,rs:91},
+ {t:"WMT",n:"Walmart",s:"Consumer",mc:961,px:95,hi:107,d52:-11,r1m:-8,r3m:-4,r1y:29,r3y:141,r5y:182,rg5:5,rg3:5,eg5:8,roe:22,gm:25,em:6,nm:3,fm:2,pe:41,pe3:34,dy:0.8,fy:1.3,de:0.6,cr:0.8,rs:57},
+ {t:"AMD",n:"Advanced Micro Devices",s:"Technology",mc:892,px:450,hi:460,d52:-2,r1m:29,r3m:178,r1y:333,r3y:356,r5y:583,rg5:25,rg3:14,eg5:50,roe:12,gm:50,em:20,nm:13,fm:23,pe:58,pe3:29,dy:0,fy:1.0,de:0.05,cr:2.5,rs:99},
+ {t:"TSM",n:"Taiwan Semiconductor",s:"Technology",mc:1100,px:250,hi:270,d52:-7,r1m:5,r3m:20,r1y:60,r3y:120,r5y:250,rg5:22,rg3:20,eg5:25,roe:30,gm:58,em:67,nm:42,fm:25,pe:22,pe3:16,dy:1.3,fy:3.0,de:0.25,cr:2.4,rs:90},
+ {t:"ASML",n:"ASML Holding",s:"Technology",mc:380,px:950,hi:1050,d52:-9,r1m:3,r3m:15,r1y:30,r3y:60,r5y:180,rg5:20,rg3:12,eg5:22,roe:70,gm:52,em:35,nm:28,fm:25,pe:35,pe3:25,dy:0.8,fy:2.0,de:0.3,cr:1.5,rs:85},
+ {t:"QCOM",n:"Qualcomm",s:"Technology",mc:190,px:170,hi:200,d52:-15,r1m:-2,r3m:8,r1y:10,r3y:40,r5y:90,rg5:10,rg3:8,eg5:12,roe:40,gm:56,em:35,nm:25,fm:28,pe:14,pe3:12,dy:2.2,fy:6.0,de:0.5,cr:2.5,rs:60},
+ {t:"ARM",n:"Arm Holdings",s:"Technology",mc:180,px:170,hi:200,d52:-15,r1m:-4,r3m:10,r1y:50,r3y:null,r5y:null,rg5:25,rg3:25,eg5:null,roe:8,gm:96,em:30,nm:18,fm:20,pe:80,pe3:50,dy:0,fy:1.0,de:0.05,cr:4.0,rs:75},
+ {t:"SMCI",n:"Super Micro Computer",s:"Technology",mc:40,px:50,hi:95,d52:-47,r1m:15,r3m:30,r1y:-20,r3y:200,r5y:800,rg5:50,rg3:60,eg5:40,roe:25,gm:14,em:10,nm:7,fm:-10,pe:18,pe3:10,dy:0,fy:-2.0,de:0.4,cr:3.0,rs:85},
+ {t:"INTC",n:"Intel",s:"Technology",mc:450,px:107,hi:133,d52:-19,r1m:-1,r3m:10,r1y:20,r3y:-10,r5y:-20,rg5:-2,rg3:-3,eg5:-15,roe:5,gm:35,em:25,nm:8,fm:-5,pe:35,pe3:18,dy:1.5,fy:-1.0,de:0.5,cr:1.5,rs:98},
+ {t:"MRVL",n:"Marvell Technology",s:"Technology",mc:220,px:252,hi:324,d52:-22,r1m:-5,r3m:30,r1y:58,r3y:100,r5y:300,rg5:20,rg3:18,eg5:25,roe:14,gm:60,em:35,nm:10,fm:20,pe:30,pe3:18,dy:0.3,fy:1.5,de:0.4,cr:1.5,rs:98},
+ {t:"DELL",n:"Dell Technologies",s:"Technology",mc:260,px:369,hi:469,d52:-21,r1m:-3,r3m:20,r1y:40,r3y:150,r5y:250,rg5:8,rg3:6,eg5:20,roe:90,gm:22,em:8,nm:4,fm:5,pe:14,pe3:11,dy:1.2,fy:4.0,de:3.0,cr:0.8,rs:97},
+ {t:"ORCL",n:"Oracle",s:"Technology",mc:600,px:220,hi:260,d52:-15,r1m:-3,r3m:10,r1y:40,r3y:150,r5y:250,rg5:10,rg3:8,eg5:15,roe:80,gm:70,em:45,nm:25,fm:20,pe:28,pe3:22,dy:0.9,fy:2.5,de:6.0,cr:0.7,rs:70},
+ {t:"CRM",n:"Salesforce",s:"Technology",mc:260,px:270,hi:370,d52:-27,r1m:-4,r3m:-5,r1y:-20,r3y:30,r5y:40,rg5:15,rg3:12,eg5:30,roe:12,gm:77,em:30,nm:18,fm:30,pe:22,pe3:18,dy:0.5,fy:5.0,de:0.2,cr:1.1,rs:35},
+ {t:"ADBE",n:"Adobe",s:"Technology",mc:200,px:420,hi:600,d52:-30,r1m:-3,r3m:-5,r1y:-25,r3y:0,r5y:20,rg5:12,rg3:11,eg5:15,roe:40,gm:88,em:45,nm:30,fm:35,pe:18,pe3:15,dy:0,fy:5.0,de:0.3,cr:1.2,rs:30},
+ {t:"NFLX",n:"Netflix",s:"Consumer",mc:400,px:950,hi:1100,d52:-14,r1m:-3,r3m:10,r1y:40,r3y:120,r5y:150,rg5:15,rg3:14,eg5:40,roe:35,gm:47,em:28,nm:22,fm:18,pe:38,pe3:28,dy:0,fy:2.5,de:0.7,cr:1.2,rs:75},
+ {t:"NKE",n:"Nike",s:"Consumer",mc:70,px:45.04,hi:80.17,d52:-43.8,r1m:-2,r3m:-5,r1y:-30,r3y:-40,r5y:-20,rg5:4.4,rg3:3,eg5:6.3,roe:16.4,gm:40.8,em:12,nm:8,fm:7,pe:22,pe3:16,dy:2.0,fy:4.0,de:0.8,cr:2.4,rs:30},
+ {t:"CMG",n:"Chipotle Mexican Grill",s:"Consumer",mc:45,px:32.61,hi:58.42,d52:-44.2,r1m:-0.4,r3m:-10,r1y:-25,r3y:30,r5y:150,rg5:14.8,rg3:14,eg5:35.5,roe:48.4,gm:30,em:18,nm:13,fm:12,pe:27.9,pe3:20,dy:0,fy:2.5,de:1.2,cr:1.5,rs:45},
+ {t:"DASH",n:"DoorDash",s:"Consumer",mc:70,px:170.03,hi:285.50,d52:-40.4,r1m:1.15,r3m:-10,r1y:-20,r3y:80,r5y:null,rg5:36.6,rg3:30,eg5:null,roe:9.6,gm:50.9,em:10,nm:6,fm:15,pe:60,pe3:35,dy:0,fy:2.0,de:0.1,cr:1.8,rs:50},
+ {t:"LYFT",n:"Lyft",s:"Consumer",mc:6,px:14.28,hi:25.54,d52:-44.1,r1m:0.28,r3m:-15,r1y:-30,r3y:50,r5y:null,rg5:21.7,rg3:20,eg5:null,roe:150.2,gm:35.6,em:8,nm:5,fm:12,pe:12,pe3:9,dy:0,fy:8.0,de:0.6,cr:1.2,rs:35},
+ {t:"DKNG",n:"DraftKings",s:"Consumer",mc:20,px:28.51,hi:48.78,d52:-41.6,r1m:-0.97,r3m:-15,r1y:-30,r3y:null,r5y:null,rg5:58,rg3:50,eg5:null,roe:7.9,gm:41.8,em:5,nm:-10,fm:5,pe:40,pe3:22,dy:0,fy:1.0,de:1.5,cr:1.3,rs:38},
+ {t:"LVS",n:"Las Vegas Sands",s:"Consumer",mc:35,px:48.94,hi:70.45,d52:-30.5,r1m:-1.61,r3m:-8,r1y:-15,r3y:30,r5y:-10,rg5:34.7,rg3:30,eg5:null,roe:116,gm:49.6,em:35,nm:18,fm:20,pe:18,pe3:12,dy:2.5,fy:6.0,de:4.0,cr:1.0,rs:50},
+ {t:"ZBRA",n:"Zebra Technologies",s:"Technology",mc:18,px:237.39,hi:352.66,d52:-32.7,r1m:-1.11,r3m:5,r1y:-10,r3y:20,r5y:30,rg5:3.9,rg3:4,eg5:-2.6,roe:11.6,gm:48.2,em:18,nm:10,fm:15,pe:18,pe3:14,dy:0,fy:4.0,de:0.6,cr:1.3,rs:60},
+ {t:"SBUX",n:"Starbucks",s:"Consumer",mc:90,px:80,hi:105,d52:-24,r1m:-2,r3m:-5,r1y:-15,r3y:-10,r5y:5,rg5:6,rg3:5,eg5:0,roe:40,gm:27,em:18,nm:11,fm:12,pe:22,pe3:18,dy:2.8,fy:4.0,de:3.0,cr:0.8,rs:40},
+ {t:"MCD",n:"McDonald's",s:"Consumer",mc:210,px:290,hi:320,d52:-9,r1m:0,r3m:5,r1y:5,r3y:30,r5y:50,rg5:5,rg3:5,eg5:8,roe:90,gm:57,em:50,nm:32,fm:28,pe:24,pe3:21,dy:2.3,fy:4.0,de:5.0,cr:1.3,rs:60},
+ {t:"ABNB",n:"Airbnb",s:"Consumer",mc:80,px:125,hi:165,d52:-24,r1m:-3,r3m:5,r1y:-5,r3y:40,r5y:null,rg5:25,rg3:18,eg5:30,roe:30,gm:83,em:25,nm:22,fm:35,pe:28,pe3:20,dy:0,fy:5.0,de:0.3,cr:1.8,rs:55},
+ {t:"UBER",n:"Uber Technologies",s:"Consumer",mc:180,px:85,hi:100,d52:-15,r1m:2,r3m:15,r1y:20,r3y:150,r5y:null,rg5:30,rg3:25,eg5:null,roe:30,gm:40,em:12,nm:18,fm:15,pe:28,pe3:20,dy:0,fy:4.0,de:0.5,cr:1.1,rs:70},
+ {t:"COST",n:"Costco",s:"Consumer",mc:430,px:980,hi:1080,d52:-9,r1m:0,r3m:5,r1y:15,r3y:80,r5y:150,rg5:9,rg3:8,eg5:12,roe:30,gm:13,em:5,nm:3,fm:3,pe:50,pe3:42,dy:0.5,fy:1.5,de:0.4,cr:1.0,rs:65},
+ {t:"DIS",n:"Walt Disney",s:"Consumer",mc:200,px:110,hi:125,d52:-12,r1m:-1,r3m:5,r1y:10,r3y:-10,r5y:-20,rg5:5,rg3:4,eg5:10,roe:8,gm:35,em:18,nm:8,fm:10,pe:18,pe3:15,dy:1.0,fy:4.0,de:0.5,cr:1.0,rs:55},
+ {t:"LDOS",n:"Leidos Holdings",s:"Industrial",mc:20,px:150,hi:272,d52:-44.8,r1m:-2,r3m:5,r1y:-10,r3y:40,r5y:60,rg5:6.9,rg3:6,eg5:17.5,roe:27.2,gm:17.9,em:12,nm:8,fm:10,pe:16,pe3:13,dy:1.2,fy:6.0,de:0.8,cr:1.5,rs:50},
+ {t:"HII",n:"Huntington Ingalls",s:"Industrial",mc:10,px:230,hi:355,d52:-35.1,r1m:-1,r3m:0,r1y:-10,r3y:0,r5y:-10,rg5:5.9,rg3:5,eg5:-1.9,roe:12,gm:12.4,em:10,nm:6,fm:5,pe:14,pe3:12,dy:2.5,fy:5.0,de:1.0,cr:1.3,rs:45},
+ {t:"CAT",n:"Caterpillar",s:"Industrial",mc:190,px:390,hi:420,d52:-7,r1m:2,r3m:10,r1y:20,r3y:80,r5y:150,rg5:8,rg3:7,eg5:15,roe:50,gm:30,em:22,nm:16,fm:12,pe:18,pe3:16,dy:1.5,fy:5.0,de:2.0,cr:1.4,rs:70},
+ {t:"DE",n:"Deere & Co",s:"Industrial",mc:130,px:480,hi:520,d52:-8,r1m:1,r3m:8,r1y:15,r3y:40,r5y:120,rg5:7,rg3:5,eg5:12,roe:30,gm:30,em:25,nm:15,fm:10,pe:16,pe3:14,dy:1.5,fy:4.0,de:2.5,cr:2.0,rs:65},
+ {t:"GE",n:"GE Aerospace",s:"Industrial",mc:250,px:230,hi:250,d52:-8,r1m:3,r3m:12,r1y:30,r3y:200,r5y:300,rg5:5,rg3:8,eg5:25,roe:30,gm:35,em:20,nm:14,fm:12,pe:35,pe3:25,dy:0.5,fy:2.5,de:1.0,cr:1.2,rs:80},
+ {t:"BA",n:"Boeing",s:"Industrial",mc:140,px:230,hi:260,d52:-12,r1m:0,r3m:5,r1y:30,r3y:10,r5y:-30,rg5:2,rg3:5,eg5:null,roe:-20,gm:10,em:5,nm:-5,fm:-8,pe:50,pe3:25,dy:0,fy:-2.0,de:8.0,cr:1.3,rs:55},
+ {t:"UNH",n:"UnitedHealth Group",s:"Healthcare",mc:280,px:310,hi:520,d52:-40,r1m:-5,r3m:-10,r1y:-40,r3y:-20,r5y:0,rg5:10,rg3:10,eg5:5,roe:22,gm:25,em:9,nm:5,fm:8,pe:12,pe3:10,dy:2.5,fy:8.0,de:0.7,cr:0.8,rs:25},
+ {t:"JNJ",n:"Johnson & Johnson",s:"Healthcare",mc:400,px:165,hi:180,d52:-8,r1m:0,r3m:5,r1y:10,r3y:10,r5y:20,rg5:5,rg3:4,eg5:5,roe:25,gm:68,em:35,nm:22,fm:22,pe:15,pe3:14,dy:3.2,fy:5.0,de:0.5,cr:1.1,rs:55},
+ {t:"ABBV",n:"AbbVie",s:"Healthcare",mc:350,px:200,hi:220,d52:-9,r1m:1,r3m:8,r1y:20,r3y:40,r5y:90,rg5:6,rg3:5,eg5:8,roe:80,gm:70,em:45,nm:20,fm:30,pe:16,pe3:14,dy:3.0,fy:6.0,de:6.0,cr:0.8,rs:65},
+ {t:"PFE",n:"Pfizer",s:"Healthcare",mc:150,px:27,hi:32,d52:-16,r1m:-2,r3m:0,r1y:-10,r3y:-30,r5y:-20,rg5:0,rg3:-5,eg5:-10,roe:12,gm:65,em:30,nm:15,fm:12,pe:8,pe3:9,dy:6.5,fy:8.0,de:0.7,cr:1.2,rs:30},
+ {t:"V",n:"Visa",s:"Finance",mc:600,px:290,hi:320,d52:-9,r1m:-1,r3m:5,r1y:-8,r3y:40,r5y:70,rg5:11,rg3:10,eg5:12,roe:50,gm:80,em:70,nm:53,fm:55,pe:23,pe3:18,dy:0.7,fy:4.0,de:0.5,cr:1.3,rs:60},
+ {t:"MA",n:"Mastercard",s:"Finance",mc:450,px:480,hi:560,d52:-14,r1m:-1,r3m:3,r1y:-13,r3y:40,r5y:80,rg5:12,rg3:11,eg5:14,roe:170,gm:80,em:65,nm:45,fm:48,pe:24,pe3:18,dy:0.6,fy:4.0,de:2.5,cr:1.1,rs:55},
+ {t:"JPM",n:"JPMorgan Chase",s:"Finance",mc:700,px:300,hi:320,d52:-6,r1m:1,r3m:8,r1y:25,r3y:80,r5y:120,rg5:8,rg3:8,eg5:12,roe:17,gm:null,em:null,nm:32,fm:null,pe:14,pe3:13,dy:2.0,fy:null,de:null,cr:null,rs:70},
+ {t:"SCHW",n:"Charles Schwab",s:"Finance",mc:150,px:85,hi:95,d52:-11,r1m:0,r3m:5,r1y:20,r3y:30,r5y:50,rg5:8,rg3:5,eg5:10,roe:14,gm:null,em:null,nm:30,fm:null,pe:18,pe3:14,dy:1.5,fy:4.0,de:1.0,cr:null,rs:60},
+ {t:"PYPL",n:"PayPal",s:"Finance",mc:75,px:75,hi:95,d52:-21,r1m:-3,r3m:0,r1y:-15,r3y:-10,r5y:-50,rg5:12,rg3:8,eg5:15,roe:22,gm:45,em:20,nm:14,fm:18,pe:14,pe3:11,dy:0,fy:7.0,de:0.5,cr:1.3,rs:40}
+];
+
+/* ===== STRATEGIES: weights [G,Q,V,M,R] ===== */
+const STRATS={
+ balanced:{name:"GEAR+ Balanced",tag:"25·25·20·20·10",w:[25,25,20,20,10]},
+ growth:{name:"Aggressive Growth",tag:"40·20·5·30·5",w:[40,20,5,30,5]},
+ quality:{name:"Quality Compounder",tag:"20·45·15·15·5",w:[20,45,15,15,5]},
+ value:{name:"Deep Value",tag:"10·20·50·5·15",w:[10,20,50,5,15]},
+ momentum:{name:"Momentum Breakout",tag:"10·15·5·60·10",w:[10,15,5,60,10]},
+ garp:{name:"GARP",tag:"30·25·30·10·5",w:[30,25,30,10,5]},
+ fallen:{name:"Fallen Angel",tag:"10·35·35·5·15",w:[10,35,35,5,15]},
+ defensive:{name:"Defensive Income",tag:"10·30·20·10·30",w:[10,30,20,10,30]},
+ allweather:{name:"All-Weather",tag:"20·25·20·15·20",w:[20,25,20,15,20]},
+ rocket:{name:"Small-Cap Rocket",tag:"35·15·5·40·5",w:[35,15,5,40,5]}
+};
+const FNAMES=["Growth","Quality","Value","Momentum","Risk Shield"];
+const FSHORT=["G","Q","V","M","R"];
+
+/* ===== compute raw factor inputs per stock ===== */
+function wavg(pairs){ // pairs: [val,weight] ignoring null vals
+  let s=0,w=0; for(const[v,wt]of pairs){ if(v!=null&&!isNaN(v)){s+=v*wt;w+=wt;} } return w?s/w:null;
+}
+function rawFactors(d){
+  const g = wavg([[d.rg5,.4],[d.rg3,.35],[d.eg5,.25]]);
+  const roeC = Math.min(d.roe,60); // cap buyback-distorted ROE
+  const q = wavg([[roeC,.30],[d.gm,.20],[d.em,.20],[d.fm,.20],[d.nm,.10]]);
+  const v = wavg([[d.fy,1.0],[d.dy,.8],[(50-Math.min(d.pe,80)),.4],[(40-Math.min(d.pe3,60)),.3]]);
+  const r1yC=Math.max(Math.min(d.r1y,400),-90);
+  const m = (r1yC*.35)+(d.r3m*.30)+(d.r1m*.35)+((d.rs-50)*1.0);
+  const r = wavg([[d.cr,15],[(2-Math.min(d.de==null?1:d.de,5)),12],[d.fm,.5],[d.nm,.5]]);
+  return [g,q,v,m,r];
+}
+// build raw matrix
+const RAWF = RAW.map(rawFactors);
+// percentile rank each column -> 0..100
+function pctRank(arr){
+  const valid=arr.map((v,i)=>({v,i})).filter(o=>o.v!=null&&!isNaN(o.v));
+  const sorted=[...valid].sort((a,b)=>a.v-b.v);
+  const n=sorted.length;
+  const out=new Array(arr.length).fill(50);
+  sorted.forEach((o,idx)=>{ out[o.i]= n<=1?50: Math.round(idx/(n-1)*100); });
+  return out;
+}
+const FCOLS=[0,1,2,3,4].map(c=>pctRank(RAWF.map(r=>r[c])));
+// attach factor scores to stocks
+RAW.forEach((d,i)=>{ d.f=[0,1,2,3,4].map(c=>FCOLS[c][i]); });
+
+function alphaFor(d,wkey){
+  const w=STRATS[wkey].w, sw=w.reduce((a,b)=>a+b,0);
+  let s=0; for(let k=0;k<5;k++) s+=d.f[k]*w[k];
+  return Math.round(s/sw);
+}
+function tierOf(a){ return a>=82?"S":a>=70?"A":a>=58?"B":a>=45?"C":"D"; }
+const TIERVERDICT={
+  S:{txt:"โหดทุกด้าน — Alpha สูงสุด",col:"var(--S)"},
+  A:{txt:"น่าสนใจมาก — พิจารณาเข้า",col:"var(--A)"},
+  B:{txt:"ดี — เฝ้าดู รอจังหวะ",col:"var(--B)"},
+  C:{txt:"กลางๆ — ต้องมีเหตุผลเฉพาะตัว",col:"var(--C)"},
+  D:{txt:"อ่อน — หลีกเลี่ยง / เก็งกำไรเท่านั้น",col:"var(--D)"}
+};
+
+/* ===== heatmap color for 0..100 score ===== */
+function heat(v){
+  if(v>=70) return "var(--good)";
+  if(v>=55) return "#4a7d3e";
+  if(v>=45) return "#6b6230";
+  if(v>=30) return "#7a4a2a";
+  return "var(--bad)";
+}
+function scoreColor(v){ return v>=70?"var(--green)":v>=45?"var(--mute)":v>=30?"var(--amber)":"var(--red)"; }
+
+/* ===== auto SWOT generator ===== */
+function swot(d){
+  const S=[],W=[],O=[],T=[];
+  const num=x=>x>0?"+"+x:""+x;
+  // strengths
+  if(d.roe>=25) S.push(`ROE <b>${d.roe}%</b> — ใช้ทุนมีประสิทธิภาพ moat แข็ง`);
+  if(d.gm>=55) S.push(`Gross margin <b>${d.gm}%</b> — pricing power สูง`);
+  if(d.rg5>=18) S.push(`รายได้โต 5Y <b>${num(d.rg5)}%/yr</b> — top-line momentum`);
+  if(d.eg5!=null&&d.eg5>=15) S.push(`EPS โต 5Y <b>${num(d.eg5)}%/yr</b> — กำไรขยายต่อเนื่อง`);
+  if(d.fm>=20) S.push(`FCF margin <b>${d.fm}%</b> — เครื่องปั๊มเงินสด`);
+  if(d.de!=null&&d.de<=0.4) S.push(`Debt/Equity <b>${d.de}</b> — งบดุลสะอาด`);
+  if(d.f[2]>=75) S.push(`Value percentile <b>${d.f[2]}</b> — ถูกเทียบ peer`);
+  if(d.mc>=500&&S.length<5) S.push(`Mega cap <b>$${d.mc}B</b> — ทนแรงกดตลาดได้ดี`);
+  // weaknesses
+  if(d.rg5<5) W.push(`รายได้โตช้า <b>${num(d.rg5)}%/yr</b>`);
+  if(d.eg5!=null&&d.eg5<0) W.push(`EPS หด <b>${d.eg5}%/yr</b> — กำไรถดถอย`);
+  if(d.roe<10) W.push(`ROE ต่ำ <b>${d.roe}%</b> — return on capital อ่อน`);
+  if(d.gm<20) W.push(`Gross margin บาง <b>${d.gm}%</b>`);
+  if(d.fm<0) W.push(`FCF ติดลบ <b>${d.fm}%</b> — เผาเงินสด`);
+  if(d.de!=null&&d.de>=3) W.push(`Debt/Equity สูง <b>${d.de}</b> — เลเวอเรจหนัก`);
+  if(d.nm<0) W.push(`Net margin ติดลบ <b>${d.nm}%</b>`);
+  if(d.f[1]<35&&W.length<4) W.push(`Quality percentile ต่ำ <b>${d.f[1]}</b>`);
+  // opportunities
+  if(d.d52<=-30) O.push(`ราคาร่วง <b>${d.d52}%</b> จาก 52WH — valuation compression เปิดโอกาส`);
+  if(d.f[2]>=65&&d.f[1]>=60) O.push(`ของดีราคาถูก — quality+value ซ้อนกัน`);
+  if(d.r1m>0&&d.d52<=-25) O.push(`เริ่มมีแรงซื้อกลับ (1M <b>+${d.r1m}%</b>) หลังลงลึก`);
+  if(d.f[3]>=80) O.push(`Momentum/RS แรง (RS <b>${d.rs}</b>) — trend ยังวิ่ง`);
+  // threats
+  if(d.pe>=60) T.push(`P/E <b>${d.pe}x</b> — แพง ไม่มี margin of safety`);
+  if(d.d52<=-40) T.push(`ร่วงหนัก <b>${d.d52}%</b> — เสี่ยง fundamental เสื่อม`);
+  if(d.f[3]<30) T.push(`Momentum อ่อน <b>${d.f[3]}</b> — ตลาดยังไม่เอา`);
+  if(d.nm<0) T.push(`ขาดทุนสุทธิ — เสี่ยง dilution / ก่อหนี้`);
+  if(d.de!=null&&d.de>=4) T.push(`เลเวอเรจสูงมาก <b>${d.de}</b> — เปราะต่อดอกเบี้ย`);
+  if(T.length<2) T.push(`Macro — เงินเฟ้อ/ดอกเบี้ย/geopolitics กระทบตลาดโดยรวม`);
+  return {S:S.slice(0,6),W:W.slice(0,5),O:O.slice(0,4),T:T.slice(0,3)};
+}
+
+/* =========================================================
+   STATE + RENDER
+   ========================================================= */
+let state={strat:"balanced",sort:"alpha",dir:-1,search:"",sector:"",mcap:0,pe:200,rs:0,tier:0,dmin:0,dmax:100,sel:null};
+
+// populate sector select
+[...new Set(RAW.map(d=>d.s))].sort().forEach(s=>{
+  const o=document.createElement("option");o.value=s;o.textContent=s;document.getElementById("fSector").appendChild(o);
+});
+// strategy chips
+const sc=document.getElementById("stratChips");
+Object.entries(STRATS).forEach(([k,v])=>{
+  const b=document.createElement("button");
+  b.className="chip"+(k==="balanced"?" on":"");b.dataset.k=k;
+  b.innerHTML=`${v.name}<small>${v.tag}</small>`;
+  b.onclick=()=>{state.strat=k;state.sel=null;[...sc.children].forEach(c=>c.classList.toggle("on",c.dataset.k===k));render();};
+  sc.appendChild(b);
+});
+
+// columns def
+const COLS=[
+ {k:"rank",lbl:"#",cls:"l",sortable:false},
+ {k:"tier",lbl:"Tier",cls:"l",sortable:true},
+ {k:"t",lbl:"Ticker",cls:"l",sortable:true},
+ {k:"s",lbl:"Sector",cls:"l",sortable:true},
+ {k:"alpha",lbl:"Alpha",sortable:true},
+ {k:"f0",lbl:"Grow",sortable:true},
+ {k:"f1",lbl:"Qual",sortable:true},
+ {k:"f2",lbl:"Value",sortable:true},
+ {k:"f3",lbl:"Mom",sortable:true},
+ {k:"f4",lbl:"Risk",sortable:true},
+ {k:"px",lbl:"Price",sortable:true},
+ {k:"d52",lbl:"52WH",sortable:true},
+ {k:"pe",lbl:"P/E",sortable:true},
+ {k:"rs",lbl:"RS",sortable:true}
+];
+
+function getVal(d,k){
+  if(k==="alpha")return alphaFor(d,state.strat);
+  if(k==="tier")return alphaFor(d,state.strat);
+  if(k.startsWith("f"))return d.f[+k[1]];
+  return d[k];
+}
+function passFilter(d){
+  if(state.search){const q=state.search.toLowerCase();if(!d.t.toLowerCase().includes(q)&&!d.n.toLowerCase().includes(q))return false;}
+  if(state.sector&&d.s!==state.sector)return false;
+  if(d.mc<state.mcap)return false;
+  if(d.pe>state.pe)return false;
+  if(d.rs<state.rs)return false;
+  const drop=Math.abs(d.d52);
+  if(drop<state.dmin||drop>state.dmax)return false;
+  if(alphaFor(d,state.strat)<state.tier)return false;
+  return true;
+}
+
+function render(){
+  const list=RAW.filter(passFilter).map(d=>({d,a:alphaFor(d,state.strat)}));
+  // sort
+  list.sort((x,y)=>{
+    let va,vb;
+    if(state.sort==="alpha"||state.sort==="tier"){va=x.a;vb=y.a;}
+    else if(state.sort==="t"||state.sort==="s"){va=x.d[state.sort];vb=y.d[state.sort];return state.dir*(va<vb?-1:va>vb?1:0);}
+    else va=getVal(x.d,state.sort),vb=getVal(y.d,state.sort);
+    return state.dir*((va||0)-(vb||0));
+  });
+
+  // KPI
+  const dist={S:0,A:0,B:0,C:0,D:0};
+  list.forEach(o=>dist[tierOf(o.a)]++);
+  const kp=document.getElementById("kpis");
+  kp.innerHTML=`
+    <div class="kpi"><div class="n">${list.length}</div><div class="l">หุ้นที่ผ่านfilter</div></div>
+    <div class="kpi tS"><div class="n">${dist.S}</div><div class="l">S-Tier</div></div>
+    <div class="kpi tA"><div class="n">${dist.A}</div><div class="l">A-Tier</div></div>
+    <div class="kpi tB"><div class="n">${dist.B}</div><div class="l">B-Tier</div></div>
+    <div class="kpi tC"><div class="n">${dist.C}</div><div class="l">C-Tier</div></div>
+    <div class="kpi tD"><div class="n">${dist.D}</div><div class="l">D-Tier</div></div>`;
+
+  // head
+  const th=document.getElementById("thead");
+  th.innerHTML=COLS.map(c=>{
+    const active=state.sort===c.k;
+    const ar=active?`<span class="ar">${state.dir<0?"▼":"▲"}</span>`:"";
+    return `<th class="${c.cls||""}" data-k="${c.k}" ${c.sortable===false?'style="cursor:default"':""}>${c.lbl} ${ar}</th>`;
+  }).join("");
+  th.querySelectorAll("th").forEach(el=>{
+    const c=COLS.find(x=>x.k===el.dataset.k);
+    if(c&&c.sortable!==false)el.onclick=()=>{
+      if(state.sort===el.dataset.k)state.dir*=-1;
+      else{state.sort=el.dataset.k;state.dir=(el.dataset.k==="t"||el.dataset.k==="s")?1:-1;}
+      render();
+    };
+  });
+
+  // body
+  const tb=document.getElementById("tbody");
+  if(!list.length){tb.innerHTML=`<tr><td colspan="${COLS.length}" class="empty">ไม่มีหุ้นเข้าเกณฑ์ — ลองคลาย filter (ลด min tier / ขยายช่วง drop / ลด min RS)</td></tr>`;document.getElementById("drill").style.display="none";return;}
+  tb.innerHTML=list.map((o,i)=>{
+    const d=o.d,a=o.a,tr=tierOf(a);
+    const fbar=k=>`<td><div class="fbar"><span class="fn" style="color:${scoreColor(d.f[k])}">${d.f[k]}</span><div class="ft"><i style="width:${d.f[k]}%;background:${heat(d.f[k])}"></i></div></div></td>`;
+    const d52c=d.d52<=-1?"neg":d.d52>=1?"pos":"neu";
+    const rsc=d.rs>=80?"pos":d.rs>=50?"neu":"neg";
+    return `<tr data-t="${d.t}" class="${state.sel===d.t?'sel':''}">
+      <td class="rank">${i+1}</td>
+      <td class="l"><span class="tier-badge b-${tr}">${tr}</span></td>
+      <td class="tk"><div class="sym">${d.t}${d.ipo?'<span class="ipo-tag">IPO</span>':''}</div><div class="nm">${d.n}</div></td>
+      <td class="sec">${d.s}</td>
+      <td class="alpha"><span class="av" style="color:${TIERVERDICT[tr].col}">${a}</span></td>
+      ${fbar(0)}${fbar(1)}${fbar(2)}${fbar(3)}${fbar(4)}
+      <td class="mono">$${d.px}</td>
+      <td class="mono ${d52c}">${d.d52}%</td>
+      <td class="mono ${d.pe>=50?'neg':d.pe<=15?'pos':'neu'}">${d.pe}x</td>
+      <td class="rs"><span class="rsv ${rsc}">${d.rs}</span></td>
+    </tr>`;
+  }).join("");
+  tb.querySelectorAll("tr[data-t]").forEach(row=>{
+    row.onclick=()=>{state.sel=row.dataset.t;render();drill(row.dataset.t);};
+  });
+
+  if(state.sel&&list.find(o=>o.d.t===state.sel))drill(state.sel);
+  else document.getElementById("drill").style.display="none";
+}
+
+/* ===== drill-down panel ===== */
+function drill(tk){
+  const d=RAW.find(x=>x.t===tk);if(!d)return;
+  const a=alphaFor(d,state.strat),tr=tierOf(a),vd=TIERVERDICT[tr],sw=swot(d);
+  const fcell=k=>`<div class="fcell"><div class="fl">${FNAMES[k]}</div><div class="fv" style="color:${scoreColor(d.f[k])}">${d.f[k]}</div><div class="fb"><i style="width:${d.f[k]}%;background:${heat(d.f[k])}"></i></div></div>`;
+  const li=(arr)=>arr.length?`<ul>${arr.map(s=>`<li>${s}</li>`).join("")}</ul>`:`<div class="none">— ไม่มีข้อมูลเด่นในมิตินี้ —</div>`;
+  const km=(l,v,c)=>`<div class="km"><div class="kl">${l}</div><div class="kv" ${c?`style="color:${c}"`:""}>${v}</div></div>`;
+  const g=x=>x==null?"—":(x>0?"+"+x:""+x);
+  const el=document.getElementById("drill");
+  el.style.display="block";
+  el.innerHTML=`<div class="dpanel">
+    <div class="dhead">
+      <div class="left">
+        <span class="tier-badge b-${tr}">${tr}</span>
+        <div>
+          <div class="sym">${d.t}${d.ipo?'<span class="ipo-tag">IPO</span>':''}</div>
+          <div class="nm">${d.n} · ${d.s}</div>
+          <div class="verdict" style="color:${vd.col}">${vd.txt}</div>
+          <div class="meta">Alpha <b>${a}</b> (${STRATS[state.strat].name}) · ราคา <b>$${d.px}</b> · ร่วง <b>${d.d52}%</b> จาก 52WH · MCap <b>$${d.mc}B</b></div>
+        </div>
+      </div>
+      <button class="dclose" onclick="state.sel=null;document.getElementById('drill').style.display='none';render();">✕ ปิด</button>
+    </div>
+    <div class="factor-row">${[0,1,2,3,4].map(fcell).join("")}</div>
+    <div class="swot">
+      <div class="sq str"><h4>Strengths — จุดแข็ง <span class="cnt">${sw.S.length} ข้อ</span></h4>${li(sw.S)}</div>
+      <div class="sq wk"><h4>Weaknesses — จุดอ่อน <span class="cnt">${sw.W.length} ข้อ</span></h4>${li(sw.W)}</div>
+      <div class="sq opp"><h4>Opportunities — โอกาส <span class="cnt">${sw.O.length} ข้อ</span></h4>${li(sw.O)}</div>
+      <div class="sq thr"><h4>Threats — ความเสี่ยง <span class="cnt">${sw.T.length} ข้อ</span></h4>${li(sw.T)}</div>
+    </div>
+    <div class="keymetrics">
+      <div class="label">Key Metrics — งบการเงินหลัก</div>
+      <div class="km-grid">
+        ${km("P/E Fwd",d.pe+"x",d.pe>=50?'var(--red)':d.pe<=15?'var(--green)':null)}
+        ${km("P/E +3Y",d.pe3+"x")}
+        ${km("ROE",d.roe+"%",d.roe>=25?'var(--green)':d.roe<10?'var(--red)':null)}
+        ${km("Gross Margin",d.gm+"%")}
+        ${km("EBITDA %",d.em+"%")}
+        ${km("Net Margin",d.nm+"%",d.nm<0?'var(--red)':null)}
+        ${km("FCF Margin",d.fm+"%",d.fm<0?'var(--red)':d.fm>=20?'var(--green)':null)}
+        ${km("Rev 5Y",g(d.rg5)+"%",d.rg5>=15?'var(--green)':d.rg5<5?'var(--red)':null)}
+        ${km("EPS 5Y",g(d.eg5)+(d.eg5==null?"":"%"),d.eg5!=null&&d.eg5<0?'var(--red)':d.eg5!=null&&d.eg5>=15?'var(--green)':null)}
+        ${km("Div Yield",d.dy+"%")}
+        ${km("FCF Yield",d.fy+"%")}
+        ${km("Debt/Eq",d.de==null?"—":d.de,d.de!=null&&d.de>=3?'var(--red)':null)}
+        ${km("RS",d.rs,d.rs>=80?'var(--green)':d.rs<40?'var(--red)':null)}
+        ${km("1Y Return",g(d.r1y)+"%",d.r1y>0?'var(--green)':'var(--red)')}
+      </div>
+    </div>
+  </div>`;
+  el.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+/* ===== wire filters ===== */
+const $=id=>document.getElementById(id);
+$("fSearch").oninput=e=>{state.search=e.target.value;state.sel=null;render();};
+$("fSector").onchange=e=>{state.sector=e.target.value;render();};
+$("fMcap").oninput=e=>{state.mcap=+e.target.value;$("fMcapV").textContent=e.target.value;render();};
+$("fPe").oninput=e=>{state.pe=+e.target.value;$("fPeV").textContent=(+e.target.value>=200?"∞":e.target.value);render();};
+$("fRs").oninput=e=>{state.rs=+e.target.value;$("fRsV").textContent=e.target.value;render();};
+$("fTier").onchange=e=>{state.tier=+e.target.value;render();};
+document.querySelectorAll(".dp").forEach(b=>{
+  if(b.id==="dpAll")b.style.display="none";
+  b.onclick=()=>{
+    document.querySelectorAll(".dp").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    state.dmin=+b.dataset.min;state.dmax=+b.dataset.max;render();
+  };
+});
+$("resetBtn").onclick=()=>{
+  state={...state,search:"",sector:"",mcap:0,pe:200,rs:0,tier:0,dmin:0,dmax:100,sel:null};
+  $("fSearch").value="";$("fSector").value="";$("fMcap").value=0;$("fMcapV").textContent="0";
+  $("fPe").value=200;$("fPeV").textContent="∞";$("fRs").value=0;$("fRsV").textContent="0";$("fTier").value="0";
+  document.querySelectorAll(".dp").forEach(x=>x.classList.remove("on"));
+  document.querySelector('.dp[data-min="0"][data-max="100"]:not(#dpAll)').classList.add("on");
+  document.getElementById("drill").style.display="none";
+  render();
+};
+
+// ticker tape (top 4 by balanced alpha)
+const top4=RAW.map(d=>({t:d.t,a:alphaFor(d,"balanced")})).sort((x,y)=>y.a-x.a).slice(0,4);
+$("tape").innerHTML="TOP ALPHA (GEAR+)<br>"+top4.map(o=>`${o.t} · ${o.a}`).join("<br>");
+
+render();
+</script>
+</body>
+</html>
