@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALPHA SEARCHER — Composite Equity Screener</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0A0908; --panel:#14110F; --panel2:#1A1613; --line:#2A241F;
+    --gold:#C9A961; --gold-dim:#8A7544;
+    --ink:#E8E4DD; --mute:#8A8178; --faint:#5A544C;
+    --S:#C9A961; --A:#5FB888; --B:#7CA5C9; --C:#C99A5F; --D:#C96B5F;
+    --green:#4FA877; --red:#C25B4E; --amber:#C99A5F;
+    --good:#2E7D54; --bad:#8B3A30;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;-webkit-font-smoothing:antialiased}
+  body{padding:0 0 80px}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .wrap{max-width:1320px;margin:0 auto;padding:0 22px}
+
+  /* ===== Masthead ===== */
+  header.mast{border-bottom:1px solid var(--line);padding:26px 0 20px;margin-bottom:18px;position:relative;overflow:hidden}
+  .mast .eyebrow{font-family:'JetBrains Mono';font-size:10.5px;letter-spacing:.32em;color:var(--gold-dim);text-transform:uppercase;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .mast .eyebrow .dot{width:5px;height:5px;border-radius:50%;background:var(--gold);display:inline-block}
+  .mast h1{font-family:'Fraunces';font-weight:900;font-size:clamp(38px,6vw,72px);line-height:.92;letter-spacing:-.02em;margin:10px 0 8px}
+  .mast h1 .amp{color:var(--gold);font-style:italic;font-weight:500}
+  .mast .sub{color:var(--mute);font-size:14px;max-width:640px;line-height:1.5}
+  .mast .sub b{color:var(--ink);font-weight:600}
+  .ticker-tape{position:absolute;top:18px;right:0;font-family:'JetBrains Mono';font-size:10px;color:var(--faint);text-align:right;line-height:1.7;display:none}
+  @media(min-width:920px){.ticker-tape{display:block}}
+
+  /* ===== Strategy bar ===== */
+  .strat-section{margin-bottom:14px}
+  .label{font-family:'JetBrains Mono';font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);margin-bottom:9px;display:flex;align-items:center;gap:8px}
+  .label::before{content:"";width:14px;height:1px;background:var(--gold-dim)}
+  .strat-chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{font-family:'IBM Plex Sans';font-size:12.5px;font-weight:500;padding:7px 13px;border:1px solid var(--line);background:var(--panel);color:var(--mute);border-radius:2px;cursor:pointer;transition:.13s;white-space:nowrap;display:flex;flex-direction:column;gap:1px;line-height:1.15}
+  .chip small{font-family:'JetBrains Mono';font-size:8.5px;letter-spacing:.05em;color:var(--faint)}
+  .chip:hover{border-color:var(--gold-dim);color:var(--ink)}
+  .chip.on{background:linear-gradient(180deg,#1e1a14,#14110F);border-color:var(--gold);color:var(--gold)}
+  .chip.on small{color:var(--gold-dim)}
+
+  /* ===== Filters ===== */
+  .filters{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:16px 18px;margin-bottom:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px 22px;align-items:end}
+  .fld{display:flex;flex-direction:column;gap:6px}
+  .fld>span{font-family:'JetBrains Mono';font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .fld input[type=text],.fld select{background:var(--bg);border:1px solid var(--line);color:var(--ink);font-family:'IBM Plex Sans';font-size:13px;padding:8px 10px;border-radius:2px;width:100%}
+  .fld input[type=text]:focus,.fld select:focus{outline:none;border-color:var(--gold-dim)}
+  .fld select{cursor:pointer}
+  .rng{display:flex;align-items:center;gap:9px}
+  .rng input[type=range]{flex:1;accent-color:var(--gold);height:3px}
+  .rng .val{font-family:'JetBrains Mono';font-size:12px;color:var(--gold);min-width:42px;text-align:right}
+  .drop-presets{display:flex;gap:5px;grid-column:1/-1;flex-wrap:wrap}
+  .dp{font-family:'JetBrains Mono';font-size:10px;padding:5px 9px;border:1px solid var(--line);background:var(--bg);color:var(--mute);border-radius:2px;cursor:pointer;transition:.12s}
+  .dp:hover{border-color:var(--gold-dim);color:var(--ink)}
+  .dp.on{background:#231d14;border-color:var(--gold);color:var(--gold)}
+  .reset{font-family:'JetBrains Mono';font-size:10px;color:var(--faint);cursor:pointer;text-decoration:underline;text-underline-offset:3px;background:none;border:none;padding:4px 0}
+  .reset:hover{color:var(--gold)}
+
+  /* ===== KPI strip ===== */
+  .kpi-strip{display:flex;gap:0;border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-bottom:16px;flex-wrap:wrap}
+  .kpi{flex:1;min-width:96px;padding:12px 15px;border-right:1px solid var(--line);background:var(--panel)}
+  .kpi:last-child{border-right:none}
+  .kpi .n{font-family:'Fraunces';font-weight:600;font-size:26px;line-height:1}
+  .kpi .l{font-family:'JetBrains Mono';font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-top:5px}
+  .kpi.tS .n{color:var(--S)} .kpi.tA .n{color:var(--A)} .kpi.tB .n{color:var(--B)} .kpi.tC .n{color:var(--C)} .kpi.tD .n{color:var(--D)}
+
+  /* ===== Table ===== */
+  .tbl-wrap{border:1px solid var(--line);border-radius:3px;overflow-x:auto;background:var(--panel)}
+  table{border-collapse:collapse;width:100%;min-width:980px;font-size:13px}
+  thead th{font-family:'JetBrains Mono';font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:500;text-align:right;padding:13px 11px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--panel2);z-index:2}
+  thead th:hover{color:var(--gold)}
+  thead th.l{text-align:left}
+  thead th .ar{color:var(--gold);font-size:8px}
+  tbody td{padding:11px;text-align:right;border-bottom:1px solid #211c17;white-space:nowrap}
+  tbody tr{cursor:pointer;transition:background .1s}
+  tbody tr:hover{background:var(--panel2)}
+  tbody tr.sel{background:#1d1812;box-shadow:inset 3px 0 0 var(--gold)}
+  td.rank{color:var(--faint);font-family:'JetBrains Mono';font-size:11px;text-align:center;width:30px}
+  td.tk{text-align:left}
+  td.tk .sym{font-family:'JetBrains Mono';font-weight:700;font-size:14px;color:var(--ink);letter-spacing:.02em}
+  td.tk .nm{font-size:11px;color:var(--mute);margin-top:1px;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+  td.sec{text-align:left;font-size:11px;color:var(--mute)}
+  .tier-badge{font-family:'Fraunces';font-weight:900;font-size:16px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:2px;line-height:1}
+  .b-S{background:rgba(201,169,97,.16);color:var(--S);border:1px solid rgba(201,169,97,.4)}
+  .b-A{background:rgba(95,184,136,.14);color:var(--A);border:1px solid rgba(95,184,136,.35)}
+  .b-B{background:rgba(124,165,201,.13);color:var(--B);border:1px solid rgba(124,165,201,.32)}
+  .b-C{background:rgba(201,154,95,.13);color:var(--C);border:1px solid rgba(201,154,95,.32)}
+  .b-D{background:rgba(201,107,95,.13);color:var(--D);border:1px solid rgba(201,107,95,.3)}
+  td.alpha .av{font-family:'JetBrains Mono';font-weight:700;font-size:15px}
+  .fbar{display:inline-flex;flex-direction:column;align-items:flex-end;gap:3px;width:46px}
+  .fbar .fn{font-family:'JetBrains Mono';font-size:10.5px;font-weight:500}
+  .fbar .ft{width:100%;height:3px;background:#241f19;border-radius:2px;overflow:hidden}
+  .fbar .ft i{display:block;height:100%}
+  .pos{color:var(--green)} .neg{color:var(--red)} .neu{color:var(--mute)}
+  td.rs .rsv{font-family:'JetBrains Mono';font-weight:700;font-size:13px}
+  .ipo-tag{font-family:'JetBrains Mono';font-size:8px;background:var(--gold-dim);color:#0A0908;padding:1px 4px;border-radius:2px;margin-left:5px;vertical-align:middle;font-weight:700}
+  .empty{padding:50px 20px;text-align:center;color:var(--mute);font-size:14px}
+
+  /* ===== Drill-down ===== */
+  #drill{margin-top:20px;display:none}
+  .dpanel{border:1px solid var(--gold-dim);border-radius:4px;background:linear-gradient(180deg,#161109,#120f0c);overflow:hidden}
+  .dhead{padding:20px 24px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
+  .dhead .left{display:flex;gap:16px;align-items:center}
+  .dhead .tier-badge{font-size:26px;width:50px;height:50px}
+  .dhead .sym{font-family:'Fraunces';font-weight:900;font-size:32px;line-height:1}
+  .dhead .nm{font-size:13px;color:var(--mute);margin-top:2px}
+  .dhead .verdict{font-family:'Fraunces';font-weight:600;font-size:20px;margin-top:5px}
+  .dhead .meta{font-family:'JetBrains Mono';font-size:11px;color:var(--mute);margin-top:6px}
+  .dhead .meta b{color:var(--gold)}
+  .dclose{background:none;border:1px solid var(--line);color:var(--mute);font-family:'JetBrains Mono';font-size:11px;padding:6px 12px;border-radius:2px;cursor:pointer}
+  .dclose:hover{border-color:var(--gold-dim);color:var(--gold)}
+
+  .factor-row{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+  .fcell{background:var(--panel);padding:14px 16px}
+  .fcell .fl{font-family:'JetBrains Mono';font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  .fcell .fv{font-family:'JetBrains Mono';font-weight:700;font-size:22px;margin:4px 0 7px}
+  .fcell .fb{height:4px;background:#241f19;border-radius:2px;overflow:hidden}
+  .fcell .fb i{display:block;height:100%}
+
+  .swot{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+  .sq{background:var(--panel);padding:18px 20px;min-height:120px}
+  .sq h4{font-family:'IBM Plex Sans';font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;margin-bottom:11px}
+  .sq.str h4{color:var(--A)} .sq.wk h4{color:var(--D)} .sq.opp h4{color:var(--B)} .sq.thr h4{color:var(--amber)}
+  .sq h4 .cnt{font-family:'JetBrains Mono';font-size:10px;color:var(--faint);font-weight:400}
+  .sq ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .sq li{font-size:12.5px;line-height:1.45;color:var(--ink);padding-left:14px;position:relative}
+  .sq li::before{content:"▪";position:absolute;left:0;font-size:8px;top:3px}
+  .sq.str li::before{color:var(--A)} .sq.wk li::before{color:var(--D)} .sq.opp li::before{color:var(--B)} .sq.thr li::before{color:var(--amber)}
+  .sq li b{font-family:'JetBrains Mono';font-weight:700}
+  .sq .none{font-size:12px;color:var(--faint);font-style:italic}
+
+  .keymetrics{padding:18px 20px;border-top:1px solid var(--line)}
+  .keymetrics .label{margin-bottom:13px}
+  .km-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+  .km{background:var(--panel);padding:12px 14px}
+  .km .kl{font-family:'JetBrains Mono';font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .km .kv{font-family:'JetBrains Mono';font-weight:700;font-size:16px;margin-top:4px}
+
+  footer{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);font-size:11.5px;color:var(--faint);line-height:1.6}
+  footer b{color:var(--mute)}
+  .warn{font-size:11px;color:var(--amber);margin-top:8px;line-height:1.5}
+
+  @media(max-width:680px){
+    .wrap{padding:0 14px}
+    .swot{grid-template-columns:1fr}
+    .factor-row{grid-template-columns:repeat(5,1fr)}
+    .fcell{padding:9px 7px} .fcell .fv{font-size:15px}
+    .dhead{padding:16px}
+    .dhead .sym{font-size:24px}
+    .kpi .n{font-size:20px}
+  }
+  /* ===== Finnhub live bar ===== */
+  .livebar{border:1px solid var(--line);background:linear-gradient(180deg,#15110d,#100d0b);border-radius:4px;padding:12px 14px;margin-bottom:14px}
+  .lb-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .lb-title{font-family:'JetBrains Mono';font-size:11px;letter-spacing:.16em;color:var(--gold);white-space:nowrap}
+  .livebar input[type=password]{flex:1;min-width:170px;background:#0c0a08;border:1px solid var(--line);color:var(--ink);font-family:'JetBrains Mono';font-size:12px;padding:8px 10px;border-radius:3px}
+  .lb-btn{background:var(--gold);color:#1a1408;border:none;font-family:'JetBrains Mono';font-size:11px;font-weight:700;padding:8px 12px;border-radius:3px;cursor:pointer;letter-spacing:.03em}
+  .lb-btn:hover{background:#d8b96e}
+  .lb-btn.ghost{background:transparent;color:var(--mute);border:1px solid var(--line)}
+  .lb-btn.ghost:hover{color:var(--ink);border-color:var(--gold-dim)}
+  .lb-toggle{font-family:'JetBrains Mono';font-size:10.5px;color:var(--mute);display:flex;align-items:center;gap:5px;white-space:nowrap;cursor:pointer}
+  .lb-status{font-family:'JetBrains Mono';font-size:10.5px;color:var(--faint);flex-basis:100%;margin-top:3px}
+  .lb-status.live{color:var(--amber)} .lb-status.okk{color:var(--green)} .lb-status.err{color:var(--red)}
+  .lb-sub{font-family:'JetBrains Mono';font-size:9.5px;color:var(--faint);margin-top:7px;line-height:1.5}
+  /* ===== 3-layer chart ===== */
+  .chartwrap{padding:16px 20px;border-top:1px solid var(--line)}
+  .chartbox{position:relative;height:300px;width:100%;margin-top:6px}
+  .chartnote{font-family:'JetBrains Mono';font-size:9.5px;color:var(--faint);margin-top:8px;line-height:1.5}
+  @media(max-width:680px){.chartbox{height:240px}}
+  /* ===== forensic panel ===== */
+  .forensic{padding:16px 20px;border-top:1px solid var(--line);background:linear-gradient(180deg,#140f0d,#100c0a)}
+  .frow{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;margin-top:8px}
+  .fscore{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:10px 16px;min-width:96px}
+  .fscore .fsl{font-family:'JetBrains Mono';font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  .fscore .fsv{font-family:'Fraunces';font-weight:900;font-size:30px;line-height:1;margin-top:3px}
+  .fscore .fsv span{font-family:'JetBrains Mono';font-size:11px;font-weight:400;color:var(--faint)}
+  .frep{display:flex;flex-direction:column;gap:6px;justify-content:center}
+  .repbadge{font-family:'JetBrains Mono';font-size:12px;font-weight:700;letter-spacing:.08em;border:1px solid;border-radius:3px;padding:4px 10px;text-align:center}
+  .vbadge{font-family:'JetBrains Mono';font-size:9px;color:var(--faint);text-align:center}
+  .vbadge.ver{color:var(--green)}
+  .fnote{font-size:13px;color:var(--ink);line-height:1.5;margin-top:12px;font-style:italic}
+  .fflags{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+  .ff{display:grid;grid-template-columns:26px 110px 1fr;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:7px 10px}
+  .ffsev{font-family:'JetBrains Mono';font-size:12px;font-weight:700;color:#120e0a;width:26px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:3px}
+  .ffcat{font-family:'JetBrains Mono';font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold-dim)}
+  .ffwhy{font-size:12px;color:var(--mute);line-height:1.4}
+  .fflags .none{font-size:12px;color:var(--faint);padding:6px}
+  .fcite{font-family:'JetBrains Mono';font-size:9.5px;color:var(--faint);margin-top:11px;line-height:1.5;border-top:1px dotted var(--line);padding-top:9px}
+  .fcite b{color:var(--mute)}
+  .rfchip{font-family:'JetBrains Mono';font-weight:700;font-size:12px;border:1px solid;border-radius:3px;padding:2px 7px}
+  @media(max-width:680px){.ff{grid-template-columns:24px 1fr;}.ff .ffwhy{grid-column:1/-1}}
+  /* ===== leadership 12-dim accordion ===== */
+  .lead12{padding:16px 20px;border-top:1px solid var(--line)}
+  .l12own{font-family:'JetBrains Mono';font-size:11px;color:var(--mute);margin:8px 0 12px;padding:9px 12px;background:var(--panel);border:1px solid var(--line);border-radius:3px;line-height:1.5}
+  .l12row{border:1px solid var(--line);border-radius:3px;margin-bottom:5px;background:var(--panel);overflow:hidden}
+  .l12row summary{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;list-style:none;user-select:none}
+  .l12row summary::-webkit-details-marker{display:none}
+  .l12row summary::marker{content:""}
+  .l12row summary:hover{background:var(--panel2)}
+  .l12row[open] summary{border-bottom:1px dotted var(--line)}
+  .l12lbl{font-family:'JetBrains Mono';font-size:11px;color:var(--ink);letter-spacing:.02em}
+  .l12chip{font-family:'JetBrains Mono';font-weight:700;font-size:11px;border:1px solid;border-radius:3px;padding:2px 8px;white-space:nowrap}
+  .l12body{padding:10px 12px 12px}
+  .l12note{font-size:12.5px;color:var(--mute);line-height:1.55}
+  .l12cite{font-family:'JetBrains Mono';font-size:9px;color:var(--faint);margin-top:8px;line-height:1.4}
+  .l12cite b{color:var(--gold-dim)}
+  .l12-none{font-size:12px;color:var(--faint);line-height:1.6;margin-top:8px;padding:10px 12px;background:var(--panel);border:1px dashed var(--line);border-radius:3px}
+  .l12tag{font-family:'JetBrains Mono';font-size:8px;font-weight:700;color:var(--gold);border:1px solid var(--gold-dim);border-radius:2px;padding:1px 3px;margin-left:5px;vertical-align:middle;letter-spacing:.04em}
+  .l12link{color:var(--gold);text-decoration:none;border-bottom:1px dotted var(--gold-dim)}
+  .l12link:hover{color:#E6C875;border-bottom-color:#E6C875}
+</style>
+</head>
+<body>
+<header class="mast">
+  <div class="wrap">
+    <div class="ticker-tape" id="tape"></div>
+    <div class="eyebrow"><span class="dot"></span> SYSTEMATIC EQUITY SCREENER · 17 JUN 2026 · 96-NAME MERGED UNIVERSE · VALUE-FIRST</div>
+    <h1>Alpha <span class="amp">&</span> Searcher</h1>
+    <p class="sub">รวมหุ้นเด่นจาก 4 ลิสต์ — <b>Conviction 20 · Trump · AI-Infrastructure · Pelosi</b> (ตัวซ้ำดึงลงลึกถึง rank 30) — ให้คะแนน <b>5 factor</b> แบบ percentile แล้วจัด <b>S→D tier</b> · <b>ดีฟอลต์เรียงตาม Value — undervalue ก่อน</b> · คลิกหุ้นเพื่อดูกราฟ 3 ชั้น (price · net margin · P/E) + SWOT · ต่อ <b>Finnhub</b> ด้านบนเพื่อราคา real-time</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- Finnhub live bar -->
+  <div class="livebar">
+    <div class="lb-row">
+      <span class="lb-title">◉ LIVE · FINNHUB</span>
+      <input type="password" id="finnKey" placeholder="วาง Finnhub API key (free)…" autocomplete="off">
+      <button class="lb-btn" id="finnConnect">เชื่อมต่อ + ดึงราคาสด</button>
+      <label class="lb-toggle"><input type="checkbox" id="finnAuto"> อัปเดตทุก 1 ชม.</label>
+      <button class="lb-btn ghost" id="finnRefresh">↻ refresh</button>
+      <span class="lb-status" id="finnStatus">โหมด snapshot — ใส่ key เพื่อใช้ราคา real-time</span>
+    </div>
+    <div class="lb-sub" id="finnSub">ราคา + % จาก 52WH มาจาก quote สด · P/E + net margin สดต่อหุ้นดึงตอนคลิกดูรายตัว · key เก็บในเครื่องนี้เท่านั้น · free tier จำกัด 60 ครั้ง/นาที (sweep ทั้ง 96 ชื่อ ≈ 110 วิ)</div>
+  </div>
+
+  <!-- Strategy selector -->
+  <div class="strat-section">
+    <div class="label">Strategy Engine — เลือกสูตรถ่วงน้ำหนัก (10 สูตร)</div>
+    <div class="strat-chips" id="stratChips"></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <label class="fld"><span>ค้นหา Ticker / ชื่อ</span><input type="text" id="fSearch" placeholder="เช่น NVDA, Nvidia, semi…"></label>
+    <label class="fld"><span>Sector</span><select id="fSector"><option value="">ทั้งหมด</option></select></label>
+    <label class="fld"><span>Min Market Cap ($B)</span><div class="rng"><input type="range" id="fMcap" min="0" max="1000" step="10" value="0"><span class="val" id="fMcapV">0</span></div></label>
+    <label class="fld"><span>Max P/E (fwd)</span><div class="rng"><input type="range" id="fPe" min="5" max="200" step="5" value="200"><span class="val" id="fPeV">∞</span></div></label>
+    <label class="fld"><span>Min RS</span><div class="rng"><input type="range" id="fRs" min="0" max="99" step="1" value="0"><span class="val" id="fRsV">0</span></div></label>
+    <label class="fld"><span>Min Tier</span><select id="fTier"><option value="0">ทุก tier</option><option value="58">B+ ขึ้นไป</option><option value="70">A+ ขึ้นไป</option><option value="82">S เท่านั้น</option></select></label>
+    <div class="drop-presets">
+      <span style="font-family:'JetBrains Mono';font-size:9.5px;color:var(--faint);align-self:center;letter-spacing:.1em;text-transform:uppercase;margin-right:4px">ร่วงจาก 52W High:</span>
+      <button class="dp" data-min="0" data-max="100">ทั้งหมด</button>
+      <button class="dp" data-min="0" data-max="10">ใกล้ high ≤10%</button>
+      <button class="dp" data-min="10" data-max="20">Minor Dip 10–20%</button>
+      <button class="dp" data-min="20" data-max="30">Dip 20–30%</button>
+      <button class="dp on" data-min="0" data-max="100" id="dpAll">—</button>
+      <button class="dp" data-min="30" data-max="50">Correction 30–50%</button>
+      <button class="dp" data-min="50" data-max="100">Bear 50%+</button>
+      <button class="reset" id="resetBtn" style="margin-left:auto">↺ reset ทั้งหมด</button>
+    </div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="kpi-strip" id="kpis"></div>
+
+  <!-- Table -->
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr id="thead"></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Drill-down -->
+  <div id="drill"></div>
+
+  <footer>
+    <b>วิธีอ่าน:</b> Factor score = percentile rank 0–100 เทียบทั้ง universe (ยิ่งสูงยิ่งดีในมิตินั้น) · <b>Alpha Score</b> = ผลรวมถ่วงน้ำหนักตาม strategy · Tier: <span style="color:var(--S)">S ≥82</span> · <span style="color:var(--A)">A 70–81</span> · <span style="color:var(--B)">B 58–69</span> · <span style="color:var(--C)">C 45–57</span> · <span style="color:var(--D)">D &lt;45</span>
+    <div class="warn">⚠ Universe = <b>96 ชื่อ</b> รวมจาก Conviction 20 / Trump / AI-Infra / Pelosi (ตัวซ้ำดึงลงลึกถึง rank 30) · ตัวเลขงบเป็น <b>snapshot ประมาณการ (~mid-Jun 2026)</b> ground จากลิสต์เดิม + ค่าประมาณเชิงสาธิต — <b>ห้ามใช้ตัดสินใจจริงโดยไม่ verify</b> · ในกราฟ 3 ชั้น เส้นราคา back-cast จาก return จริง ส่วน margin/PE history เป็น trajectory ประมาณการ (anchored ไม่ใช่ค่าจริงรายไตรมาส) · ราคา real-time ได้เมื่อต่อ <b>Finnhub</b> ด้านบน · เลเยอร์ <b>Red Flag Detector</b>: คะแนน 1–10 (10=แย่สุด) = ผสมสัญญาณจากงบ (คำนวณสด ทุกตัว) + ฐานข้อมูล qualitative (legal/accounting/insider/customer/management) · ตัวที่ติด <b>✓ web-verified</b> มี citation จริง ที่เหลือ basis = งบ/public record (knowledge-based ไม่ได้ verify สด) · ไม่ปั้น citation · Leadership scorecard 12 มิติ (มี badge <b>⬡12</b>): ทำแล้ว S+A + B(14/96) = <b>NVDA · AVGO · TSM · MU · LLY · HOOD · GOOGL · ASML · MRVL · STX · ALAB · IBKR · ARM · ANET</b> · citation มีลิงก์กดดูแหล่งจริงได้ (↗) · ช่อง N/A = ไม่มี fact ที่ verify ได้ (no assumption) · ที่เหลือไล่ทำตาม tier (B→C→D) · เครื่องมือคัดกรอง ไม่ใช่คำแนะนำลงทุน</div>
+  </footer>
+</div>
+
+<script>
+/* =========================================================
+   DATASET — snapshot ~mid-Jun 2026 (US universe)
+   fields: t,n,s,mc($B),px,hi,d52(neg%),r1m,r3m,r1y,r3y,r5y,
+   rg5,rg3,eg5(null=NA),roe,gm,em,nm,fm,pe,pe3,dy,fy,de,cr,rs,ipo
+   ========================================================= */
+const RAW=[
+ {t:"NVDA",n:"NVIDIA",s:"Technology",mc:5146,px:170,hi:187,d52:-9,r1m:-6,r3m:16,r1y:47,r3y:399,r5y:1097,rg5:65,rg3:35,eg5:80,roe:90,gm:75,em:65,nm:56,fm:47,pe:21,pe3:14,dy:0.5,fy:2.3,de:0.12,cr:4.0,rs:88},
+ {t:"GOOGL",n:"Alphabet",s:"Technology",mc:4495,px:200,hi:222,d52:-10,r1m:-7,r3m:21,r1y:110,r3y:202,r5y:209,rg5:18,rg3:13,eg5:25,roe:32,gm:58,em:38,nm:29,fm:15,pe:29,pe3:22,dy:0.2,fy:1.4,de:0.08,cr:1.8,rs:79},
+ {t:"AAPL",n:"Apple",s:"Technology",mc:4354,px:255,hi:274,d52:-7,r1m:-1,r3m:17,r1y:50,r3y:63,r5y:134,rg5:8,rg3:2,eg5:10,roe:60,gm:46,em:35,nm:27,fm:29,pe:33,pe3:28,dy:0.4,fy:3.0,de:1.5,cr:0.9,rs:74},
+ {t:"MSFT",n:"Microsoft",s:"Technology",mc:2970,px:380,hi:528,d52:-28,r1m:-5,r3m:0,r1y:-16,r3y:20,r5y:62,rg5:14,rg3:12,eg5:15,roe:35,gm:69,em:58,nm:39,fm:23,pe:21,pe3:18,dy:0.9,fy:2.5,de:0.3,cr:1.3,rs:20},
+ {t:"AMZN",n:"Amazon",s:"Consumer",mc:2646,px:220,hi:250,d52:-12,r1m:-7,r3m:16,r1y:14,r3y:96,r5y:44,rg5:12,rg3:12,eg5:35,roe:22,gm:48,em:21,nm:12,fm:0,pe:28,pe3:19,dy:0,fy:-0.1,de:0.5,cr:1.05,rs:51},
+ {t:"SPCX",n:"Space Exploration Tech.",s:"Industrial",mc:2520,px:135,hi:135,d52:0,r1m:20,r3m:20,r1y:20,r3y:20,r5y:20,rg5:60,rg3:60,eg5:null,roe:5,gm:30,em:20,nm:-45,fm:-102,pe:750,pe3:54,dy:0,fy:-0.8,de:0.4,cr:1.5,rs:77,ipo:1},
+ {t:"AVGO",n:"Broadcom",s:"Technology",mc:1874,px:280,hi:350,d52:-20,r1m:-7,r3m:21,r1y:58,r3y:372,r5y:835,rg5:30,rg3:24,eg5:40,roe:60,gm:75,em:56,nm:39,fm:43,pe:23,pe3:15,dy:0.7,fy:1.7,de:1.0,cr:2.5,rs:73},
+ {t:"TSLA",n:"Tesla",s:"Consumer",mc:1544,px:360,hi:440,d52:-18,r1m:-3,r3m:4,r1y:25,r3y:58,r5y:104,rg5:20,rg3:5,eg5:-5,roe:11,gm:18,em:11,nm:4,fm:7,pe:196,pe3:113,dy:0,fy:0.5,de:0.1,cr:1.7,rs:47},
+ {t:"META",n:"Meta Platforms",s:"Technology",mc:1507,px:600,hi:800,d52:-25,r1m:-3,r3m:-5,r1y:-15,r3y:113,r5y:81,rg5:20,rg3:20,eg5:30,roe:33,gm:81,em:51,nm:33,fm:22,pe:17,pe3:14,dy:0.4,fy:3.2,de:0.2,cr:2.5,rs:29},
+ {t:"MU",n:"Micron Technology",s:"Technology",mc:1227,px:220,hi:222,d52:-1,r1m:50,r3m:146,r1y:810,r3y:1529,r5y:1286,rg5:25,rg3:7,eg5:null,roe:28,gm:50,em:63,nm:41,fm:18,pe:10,pe3:10,dy:0.1,fy:0.8,de:0.3,cr:2.8,rs:99},
+ {t:"BRK.B",n:"Berkshire Hathaway",s:"Finance",mc:1068,px:480,hi:500,d52:-4,r1m:3,r3m:1,r1y:1,r3y:44,r5y:74,rg5:7,rg3:7,eg5:6,roe:12,gm:30,em:31,nm:19,fm:6,pe:24,pe3:23,dy:0,fy:0.5,de:0.2,cr:1.5,rs:53},
+ {t:"LLY",n:"Eli Lilly",s:"Healthcare",mc:1007,px:900,hi:940,d52:-4,r1m:12,r3m:14,r1y:41,r3y:158,r5y:436,rg5:32,rg3:32,eg5:30,roe:80,gm:80,em:50,nm:35,fm:16,pe:30,pe3:23,dy:0.6,fy:1.2,de:1.8,cr:1.2,rs:91},
+ {t:"WMT",n:"Walmart",s:"Consumer",mc:961,px:95,hi:107,d52:-11,r1m:-8,r3m:-4,r1y:29,r3y:141,r5y:182,rg5:5,rg3:5,eg5:8,roe:22,gm:25,em:6,nm:3,fm:2,pe:41,pe3:34,dy:0.8,fy:1.3,de:0.6,cr:0.8,rs:57},
+ {t:"AMD",n:"Advanced Micro Devices",s:"Technology",mc:892,px:450,hi:460,d52:-2,r1m:29,r3m:178,r1y:333,r3y:356,r5y:583,rg5:25,rg3:14,eg5:50,roe:12,gm:50,em:20,nm:13,fm:23,pe:58,pe3:29,dy:0,fy:1.0,de:0.05,cr:2.5,rs:99},
+ {t:"TSM",n:"Taiwan Semiconductor",s:"Technology",mc:1100,px:250,hi:270,d52:-7,r1m:5,r3m:20,r1y:60,r3y:120,r5y:250,rg5:22,rg3:20,eg5:25,roe:30,gm:58,em:67,nm:42,fm:25,pe:22,pe3:16,dy:1.3,fy:3.0,de:0.25,cr:2.4,rs:90},
+ {t:"ASML",n:"ASML Holding",s:"Technology",mc:380,px:950,hi:1050,d52:-9,r1m:3,r3m:15,r1y:30,r3y:60,r5y:180,rg5:20,rg3:12,eg5:22,roe:70,gm:52,em:35,nm:28,fm:25,pe:35,pe3:25,dy:0.8,fy:2.0,de:0.3,cr:1.5,rs:85},
+ {t:"QCOM",n:"Qualcomm",s:"Technology",mc:190,px:170,hi:200,d52:-15,r1m:-2,r3m:8,r1y:10,r3y:40,r5y:90,rg5:10,rg3:8,eg5:12,roe:40,gm:56,em:35,nm:25,fm:28,pe:14,pe3:12,dy:2.2,fy:6.0,de:0.5,cr:2.5,rs:60},
+ {t:"ARM",n:"Arm Holdings",s:"Technology",mc:180,px:170,hi:200,d52:-15,r1m:-4,r3m:10,r1y:50,r3y:null,r5y:null,rg5:25,rg3:25,eg5:null,roe:8,gm:96,em:30,nm:18,fm:20,pe:80,pe3:50,dy:0,fy:1.0,de:0.05,cr:4.0,rs:75},
+ {t:"SMCI",n:"Super Micro Computer",s:"Technology",mc:40,px:50,hi:95,d52:-47,r1m:15,r3m:30,r1y:-20,r3y:200,r5y:800,rg5:50,rg3:60,eg5:40,roe:25,gm:14,em:10,nm:7,fm:-10,pe:18,pe3:10,dy:0,fy:-2.0,de:0.4,cr:3.0,rs:85},
+ {t:"INTC",n:"Intel",s:"Technology",mc:450,px:107,hi:133,d52:-19,r1m:-1,r3m:10,r1y:20,r3y:-10,r5y:-20,rg5:-2,rg3:-3,eg5:-15,roe:5,gm:35,em:25,nm:8,fm:-5,pe:35,pe3:18,dy:1.5,fy:-1.0,de:0.5,cr:1.5,rs:98},
+ {t:"MRVL",n:"Marvell Technology",s:"Technology",mc:220,px:252,hi:324,d52:-22,r1m:-5,r3m:30,r1y:58,r3y:100,r5y:300,rg5:20,rg3:18,eg5:25,roe:14,gm:60,em:35,nm:10,fm:20,pe:30,pe3:18,dy:0.3,fy:1.5,de:0.4,cr:1.5,rs:98},
+ {t:"DELL",n:"Dell Technologies",s:"Technology",mc:260,px:369,hi:469,d52:-21,r1m:-3,r3m:20,r1y:40,r3y:150,r5y:250,rg5:8,rg3:6,eg5:20,roe:90,gm:22,em:8,nm:4,fm:5,pe:14,pe3:11,dy:1.2,fy:4.0,de:3.0,cr:0.8,rs:97},
+ {t:"ORCL",n:"Oracle",s:"Technology",mc:600,px:220,hi:260,d52:-15,r1m:-3,r3m:10,r1y:40,r3y:150,r5y:250,rg5:10,rg3:8,eg5:15,roe:80,gm:70,em:45,nm:25,fm:20,pe:28,pe3:22,dy:0.9,fy:2.5,de:6.0,cr:0.7,rs:70},
+ {t:"CRM",n:"Salesforce",s:"Technology",mc:260,px:270,hi:370,d52:-27,r1m:-4,r3m:-5,r1y:-20,r3y:30,r5y:40,rg5:15,rg3:12,eg5:30,roe:12,gm:77,em:30,nm:18,fm:30,pe:22,pe3:18,dy:0.5,fy:5.0,de:0.2,cr:1.1,rs:35},
+ {t:"ADBE",n:"Adobe",s:"Technology",mc:200,px:420,hi:600,d52:-30,r1m:-3,r3m:-5,r1y:-25,r3y:0,r5y:20,rg5:12,rg3:11,eg5:15,roe:40,gm:88,em:45,nm:30,fm:35,pe:18,pe3:15,dy:0,fy:5.0,de:0.3,cr:1.2,rs:30},
+ {t:"NFLX",n:"Netflix",s:"Consumer",mc:400,px:950,hi:1100,d52:-14,r1m:-3,r3m:10,r1y:40,r3y:120,r5y:150,rg5:15,rg3:14,eg5:40,roe:35,gm:47,em:28,nm:22,fm:18,pe:38,pe3:28,dy:0,fy:2.5,de:0.7,cr:1.2,rs:75},
+ {t:"NKE",n:"Nike",s:"Consumer",mc:70,px:45.04,hi:80.17,d52:-43.8,r1m:-2,r3m:-5,r1y:-30,r3y:-40,r5y:-20,rg5:4.4,rg3:3,eg5:6.3,roe:16.4,gm:40.8,em:12,nm:8,fm:7,pe:22,pe3:16,dy:2.0,fy:4.0,de:0.8,cr:2.4,rs:30},
+ {t:"CMG",n:"Chipotle Mexican Grill",s:"Consumer",mc:45,px:32.61,hi:58.42,d52:-44.2,r1m:-0.4,r3m:-10,r1y:-25,r3y:30,r5y:150,rg5:14.8,rg3:14,eg5:35.5,roe:48.4,gm:30,em:18,nm:13,fm:12,pe:27.9,pe3:20,dy:0,fy:2.5,de:1.2,cr:1.5,rs:45},
+ {t:"DASH",n:"DoorDash",s:"Consumer",mc:70,px:170.03,hi:285.50,d52:-40.4,r1m:1.15,r3m:-10,r1y:-20,r3y:80,r5y:null,rg5:36.6,rg3:30,eg5:null,roe:9.6,gm:50.9,em:10,nm:6,fm:15,pe:60,pe3:35,dy:0,fy:2.0,de:0.1,cr:1.8,rs:50},
+ {t:"LYFT",n:"Lyft",s:"Consumer",mc:6,px:14.28,hi:25.54,d52:-44.1,r1m:0.28,r3m:-15,r1y:-30,r3y:50,r5y:null,rg5:21.7,rg3:20,eg5:null,roe:150.2,gm:35.6,em:8,nm:5,fm:12,pe:12,pe3:9,dy:0,fy:8.0,de:0.6,cr:1.2,rs:35},
+ {t:"DKNG",n:"DraftKings",s:"Consumer",mc:20,px:28.51,hi:48.78,d52:-41.6,r1m:-0.97,r3m:-15,r1y:-30,r3y:null,r5y:null,rg5:58,rg3:50,eg5:null,roe:7.9,gm:41.8,em:5,nm:-10,fm:5,pe:40,pe3:22,dy:0,fy:1.0,de:1.5,cr:1.3,rs:38},
+ {t:"LVS",n:"Las Vegas Sands",s:"Consumer",mc:35,px:48.94,hi:70.45,d52:-30.5,r1m:-1.61,r3m:-8,r1y:-15,r3y:30,r5y:-10,rg5:34.7,rg3:30,eg5:null,roe:116,gm:49.6,em:35,nm:18,fm:20,pe:18,pe3:12,dy:2.5,fy:6.0,de:4.0,cr:1.0,rs:50},
+ {t:"ZBRA",n:"Zebra Technologies",s:"Technology",mc:18,px:237.39,hi:352.66,d52:-32.7,r1m:-1.11,r3m:5,r1y:-10,r3y:20,r5y:30,rg5:3.9,rg3:4,eg5:-2.6,roe:11.6,gm:48.2,em:18,nm:10,fm:15,pe:18,pe3:14,dy:0,fy:4.0,de:0.6,cr:1.3,rs:60},
+ {t:"SBUX",n:"Starbucks",s:"Consumer",mc:90,px:80,hi:105,d52:-24,r1m:-2,r3m:-5,r1y:-15,r3y:-10,r5y:5,rg5:6,rg3:5,eg5:0,roe:40,gm:27,em:18,nm:11,fm:12,pe:22,pe3:18,dy:2.8,fy:4.0,de:3.0,cr:0.8,rs:40},
+ {t:"MCD",n:"McDonald's",s:"Consumer",mc:210,px:290,hi:320,d52:-9,r1m:0,r3m:5,r1y:5,r3y:30,r5y:50,rg5:5,rg3:5,eg5:8,roe:90,gm:57,em:50,nm:32,fm:28,pe:24,pe3:21,dy:2.3,fy:4.0,de:5.0,cr:1.3,rs:60},
+ {t:"ABNB",n:"Airbnb",s:"Consumer",mc:80,px:125,hi:165,d52:-24,r1m:-3,r3m:5,r1y:-5,r3y:40,r5y:null,rg5:25,rg3:18,eg5:30,roe:30,gm:83,em:25,nm:22,fm:35,pe:28,pe3:20,dy:0,fy:5.0,de:0.3,cr:1.8,rs:55},
+ {t:"UBER",n:"Uber Technologies",s:"Consumer",mc:180,px:85,hi:100,d52:-15,r1m:2,r3m:15,r1y:20,r3y:150,r5y:null,rg5:30,rg3:25,eg5:null,roe:30,gm:40,em:12,nm:18,fm:15,pe:28,pe3:20,dy:0,fy:4.0,de:0.5,cr:1.1,rs:70},
+ {t:"COST",n:"Costco",s:"Consumer",mc:430,px:980,hi:1080,d52:-9,r1m:0,r3m:5,r1y:15,r3y:80,r5y:150,rg5:9,rg3:8,eg5:12,roe:30,gm:13,em:5,nm:3,fm:3,pe:50,pe3:42,dy:0.5,fy:1.5,de:0.4,cr:1.0,rs:65},
+ {t:"DIS",n:"Walt Disney",s:"Consumer",mc:200,px:110,hi:125,d52:-12,r1m:-1,r3m:5,r1y:10,r3y:-10,r5y:-20,rg5:5,rg3:4,eg5:10,roe:8,gm:35,em:18,nm:8,fm:10,pe:18,pe3:15,dy:1.0,fy:4.0,de:0.5,cr:1.0,rs:55},
+ {t:"LDOS",n:"Leidos Holdings",s:"Industrial",mc:20,px:150,hi:272,d52:-44.8,r1m:-2,r3m:5,r1y:-10,r3y:40,r5y:60,rg5:6.9,rg3:6,eg5:17.5,roe:27.2,gm:17.9,em:12,nm:8,fm:10,pe:16,pe3:13,dy:1.2,fy:6.0,de:0.8,cr:1.5,rs:50},
+ {t:"HII",n:"Huntington Ingalls",s:"Industrial",mc:10,px:230,hi:355,d52:-35.1,r1m:-1,r3m:0,r1y:-10,r3y:0,r5y:-10,rg5:5.9,rg3:5,eg5:-1.9,roe:12,gm:12.4,em:10,nm:6,fm:5,pe:14,pe3:12,dy:2.5,fy:5.0,de:1.0,cr:1.3,rs:45},
+ {t:"CAT",n:"Caterpillar",s:"Industrial",mc:190,px:390,hi:420,d52:-7,r1m:2,r3m:10,r1y:20,r3y:80,r5y:150,rg5:8,rg3:7,eg5:15,roe:50,gm:30,em:22,nm:16,fm:12,pe:18,pe3:16,dy:1.5,fy:5.0,de:2.0,cr:1.4,rs:70},
+ {t:"DE",n:"Deere & Co",s:"Industrial",mc:130,px:480,hi:520,d52:-8,r1m:1,r3m:8,r1y:15,r3y:40,r5y:120,rg5:7,rg3:5,eg5:12,roe:30,gm:30,em:25,nm:15,fm:10,pe:16,pe3:14,dy:1.5,fy:4.0,de:2.5,cr:2.0,rs:65},
+ {t:"GE",n:"GE Aerospace",s:"Industrial",mc:250,px:230,hi:250,d52:-8,r1m:3,r3m:12,r1y:30,r3y:200,r5y:300,rg5:5,rg3:8,eg5:25,roe:30,gm:35,em:20,nm:14,fm:12,pe:35,pe3:25,dy:0.5,fy:2.5,de:1.0,cr:1.2,rs:80},
+ {t:"BA",n:"Boeing",s:"Industrial",mc:140,px:230,hi:260,d52:-12,r1m:0,r3m:5,r1y:30,r3y:10,r5y:-30,rg5:2,rg3:5,eg5:null,roe:-20,gm:10,em:5,nm:-5,fm:-8,pe:50,pe3:25,dy:0,fy:-2.0,de:8.0,cr:1.3,rs:55},
+ {t:"UNH",n:"UnitedHealth Group",s:"Healthcare",mc:280,px:310,hi:520,d52:-40,r1m:-5,r3m:-10,r1y:-40,r3y:-20,r5y:0,rg5:10,rg3:10,eg5:5,roe:22,gm:25,em:9,nm:5,fm:8,pe:12,pe3:10,dy:2.5,fy:8.0,de:0.7,cr:0.8,rs:25},
+ {t:"JNJ",n:"Johnson & Johnson",s:"Healthcare",mc:400,px:165,hi:180,d52:-8,r1m:0,r3m:5,r1y:10,r3y:10,r5y:20,rg5:5,rg3:4,eg5:5,roe:25,gm:68,em:35,nm:22,fm:22,pe:15,pe3:14,dy:3.2,fy:5.0,de:0.5,cr:1.1,rs:55},
+ {t:"ABBV",n:"AbbVie",s:"Healthcare",mc:350,px:200,hi:220,d52:-9,r1m:1,r3m:8,r1y:20,r3y:40,r5y:90,rg5:6,rg3:5,eg5:8,roe:80,gm:70,em:45,nm:20,fm:30,pe:16,pe3:14,dy:3.0,fy:6.0,de:6.0,cr:0.8,rs:65},
+ {t:"PFE",n:"Pfizer",s:"Healthcare",mc:150,px:27,hi:32,d52:-16,r1m:-2,r3m:0,r1y:-10,r3y:-30,r5y:-20,rg5:0,rg3:-5,eg5:-10,roe:12,gm:65,em:30,nm:15,fm:12,pe:8,pe3:9,dy:6.5,fy:8.0,de:0.7,cr:1.2,rs:30},
+ {t:"V",n:"Visa",s:"Finance",mc:600,px:290,hi:320,d52:-9,r1m:-1,r3m:5,r1y:-8,r3y:40,r5y:70,rg5:11,rg3:10,eg5:12,roe:50,gm:80,em:70,nm:53,fm:55,pe:23,pe3:18,dy:0.7,fy:4.0,de:0.5,cr:1.3,rs:60},
+ {t:"MA",n:"Mastercard",s:"Finance",mc:450,px:480,hi:560,d52:-14,r1m:-1,r3m:3,r1y:-13,r3y:40,r5y:80,rg5:12,rg3:11,eg5:14,roe:170,gm:80,em:65,nm:45,fm:48,pe:24,pe3:18,dy:0.6,fy:4.0,de:2.5,cr:1.1,rs:55},
+ {t:"JPM",n:"JPMorgan Chase",s:"Finance",mc:700,px:300,hi:320,d52:-6,r1m:1,r3m:8,r1y:25,r3y:80,r5y:120,rg5:8,rg3:8,eg5:12,roe:17,gm:null,em:null,nm:32,fm:null,pe:14,pe3:13,dy:2.0,fy:null,de:null,cr:null,rs:70},
+ {t:"SCHW",n:"Charles Schwab",s:"Finance",mc:150,px:85,hi:95,d52:-11,r1m:0,r3m:5,r1y:20,r3y:30,r5y:50,rg5:8,rg3:5,eg5:10,roe:14,gm:null,em:null,nm:30,fm:null,pe:18,pe3:14,dy:1.5,fy:4.0,de:1.0,cr:null,rs:60},
+ {t:"PYPL",n:"PayPal",s:"Finance",mc:75,px:75,hi:95,d52:-21,r1m:-3,r3m:0,r1y:-15,r3y:-10,r5y:-50,rg5:12,rg3:8,eg5:15,roe:22,gm:45,em:20,nm:14,fm:18,pe:14,pe3:11,dy:0,fy:7.0,de:0.5,cr:1.3,rs:40}
+,{t:"DVA",n:"DaVita",s:"Healthcare",mc:15,px:188,hi:198,d52:-5,r1m:-2,r3m:5,r1y:70,r3y:90,r5y:130,rg5:5,rg3:5,eg5:12,roe:45,gm:30,em:18,nm:8,fm:9,pe:14,pe3:13,dy:0,fy:7,de:3.5,cr:1.6,rs:75,o:"CV"}
+,{t:"PNC",n:"PNC Financial",s:"Finance",mc:72,px:190,hi:220,d52:-12,r1m:0,r3m:4,r1y:15,r3y:40,r5y:60,rg5:5,rg3:5,eg5:8,roe:12,gm:null,em:null,nm:28,fm:null,pe:12,pe3:12,dy:3.7,fy:null,de:null,cr:null,rs:55,o:"TR"}
+,{t:"ETN",n:"Eaton",s:"Industrial",mc:130,px:330,hi:372,d52:-11,r1m:-1,r3m:8,r1y:20,r3y:80,r5y:200,rg5:10,rg3:9,eg5:15,roe:22,gm:38,em:22,nm:15,fm:12,pe:30,pe3:26,dy:1.2,fy:3,de:0.5,cr:1.5,rs:65,o:"AI"}
+,{t:"GEV",n:"GE Vernova",s:"Industrial",mc:160,px:580,hi:620,d52:-7,r1m:2,r3m:12,r1y:80,r3y:null,r5y:null,rg5:8,rg3:10,eg5:40,roe:15,gm:25,em:12,nm:8,fm:10,pe:50,pe3:40,dy:0.2,fy:1.5,de:0.2,cr:1.2,rs:80,o:"CV"}
+,{t:"FCX",n:"Freeport-McMoRan",s:"Materials",mc:65,px:45,hi:55,d52:-18,r1m:1,r3m:8,r1y:10,r3y:30,r5y:200,rg5:10,rg3:5,eg5:8,roe:15,gm:30,em:35,nm:12,fm:8,pe:25,pe3:20,dy:1.5,fy:3,de:0.5,cr:2.5,rs:60,o:"CV"}
+,{t:"CCJ",n:"Cameco",s:"Materials",mc:38,px:75,hi:85,d52:-12,r1m:2,r3m:10,r1y:30,r3y:180,r5y:600,rg5:25,rg3:30,eg5:50,roe:10,gm:28,em:30,nm:15,fm:8,pe:70,pe3:55,dy:0.2,fy:1,de:0.2,cr:2.8,rs:70,o:"AI"}
+,{t:"BABA",n:"Alibaba",s:"Technology",mc:320,px:131,hi:150,d52:-13,r1m:3,r3m:10,r1y:30,r3y:0,r5y:-40,rg5:8,rg3:5,eg5:10,roe:10,gm:40,em:18,nm:15,fm:12,pe:13,pe3:14,dy:1,fy:6,de:0.2,cr:1.5,rs:50,o:"CV"}
+,{t:"TCEHY",n:"Tencent ADR",s:"Technology",mc:550,px:55,hi:62,d52:-11,r1m:2,r3m:8,r1y:25,r3y:20,r5y:0,rg5:9,rg3:8,eg5:12,roe:20,gm:50,em:35,nm:28,fm:25,pe:17,pe3:18,dy:0.8,fy:4,de:0.2,cr:1.3,rs:60,o:"CV"}
+,{t:"NVO",n:"Novo Nordisk ADR",s:"Healthcare",mc:210,px:47,hi:80,d52:-41,r1m:-3,r3m:-10,r1y:-40,r3y:-20,r5y:50,rg5:25,rg3:20,eg5:15,roe:80,gm:84,em:48,nm:35,fm:30,pe:16,pe3:25,dy:2,fy:4,de:0.3,cr:1.2,rs:25,o:"CV"}
+,{t:"AMAT",n:"Applied Materials",s:"Technology",mc:155,px:190,hi:222,d52:-14,r1m:-2,r3m:10,r1y:20,r3y:80,r5y:250,rg5:12,rg3:8,eg5:12,roe:45,gm:48,em:30,nm:26,fm:20,pe:18,pe3:18,dy:1,fy:4,de:0.35,cr:2.3,rs:65,o:"AI"}
+,{t:"GLW",n:"Corning",s:"Technology",mc:45,px:52,hi:60,d52:-13,r1m:1,r3m:8,r1y:40,r3y:60,r5y:90,rg5:8,rg3:10,eg5:18,roe:15,gm:38,em:22,nm:12,fm:10,pe:22,pe3:20,dy:2.5,fy:4,de:0.6,cr:1.6,rs:70,o:"AI"}
+,{t:"STX",n:"Seagate Technology",s:"Technology",mc:25,px:110,hi:130,d52:-15,r1m:2,r3m:15,r1y:50,r3y:60,r5y:80,rg5:5,rg3:8,eg5:25,roe:60,gm:30,em:25,nm:15,fm:12,pe:12,pe3:14,dy:2.5,fy:5,de:2,cr:1.3,rs:80,o:"AI"}
+,{t:"WDC",n:"Western Digital",s:"Technology",mc:25,px:70,hi:85,d52:-18,r1m:1,r3m:12,r1y:40,r3y:50,r5y:60,rg5:3,rg3:8,eg5:30,roe:25,gm:30,em:22,nm:12,fm:10,pe:10,pe3:12,dy:0,fy:6,de:1.2,cr:1.8,rs:75,o:"TR"}
+,{t:"SNDK",n:"Sandisk",s:"Technology",mc:12,px:50,hi:65,d52:-23,r1m:0,r3m:10,r1y:null,r3y:null,r5y:null,rg5:10,rg3:10,eg5:null,roe:8,gm:28,em:18,nm:8,fm:5,pe:12,pe3:12,dy:0,fy:4,de:0.5,cr:2.0,rs:70,o:"TR"}
+,{t:"EME",n:"EMCOR Group",s:"Industrial",mc:35,px:520,hi:560,d52:-7,r1m:1,r3m:8,r1y:30,r3y:200,r5y:350,rg5:15,rg3:12,eg5:20,roe:30,gm:18,em:9,nm:7,fm:8,pe:22,pe3:18,dy:0.3,fy:4,de:0.1,cr:1.4,rs:70,o:"AI"}
+,{t:"FIX",n:"Comfort Systems USA",s:"Industrial",mc:25,px:600,hi:700,d52:-14,r1m:0,r3m:10,r1y:40,r3y:250,r5y:600,rg5:20,rg3:18,eg5:25,roe:35,gm:20,em:12,nm:8,fm:9,pe:28,pe3:22,dy:0.2,fy:3,de:0.2,cr:1.3,rs:75,o:"AI"}
+,{t:"MOD",n:"Modine Manufacturing",s:"Industrial",mc:7,px:120,hi:150,d52:-20,r1m:-1,r3m:8,r1y:30,r3y:300,r5y:700,rg5:15,rg3:12,eg5:30,roe:25,gm:25,em:14,nm:8,fm:6,pe:25,pe3:20,dy:0,fy:3,de:0.5,cr:1.5,rs:70,o:"AI"}
+,{t:"STRL",n:"Sterling Infrastructure",s:"Industrial",mc:9,px:250,hi:280,d52:-11,r1m:1,r3m:12,r1y:60,r3y:300,r5y:600,rg5:15,rg3:18,eg5:25,roe:25,gm:20,em:15,nm:10,fm:12,pe:22,pe3:18,dy:0,fy:4,de:0.3,cr:1.6,rs:75,o:"TR"}
+,{t:"VST",n:"Vistra",s:"Utilities",mc:55,px:150,hi:200,d52:-25,r1m:-2,r3m:5,r1y:30,r3y:300,r5y:400,rg5:10,rg3:8,eg5:25,roe:40,gm:30,em:25,nm:12,fm:15,pe:20,pe3:15,dy:0.6,fy:5,de:3,cr:1.0,rs:55,o:"AI"}
+,{t:"CEG",n:"Constellation Energy",s:"Utilities",mc:95,px:280,hi:350,d52:-20,r1m:-2,r3m:5,r1y:50,r3y:300,r5y:null,rg5:8,rg3:10,eg5:20,roe:25,gm:30,em:22,nm:15,fm:10,pe:28,pe3:20,dy:0.5,fy:3,de:0.8,cr:1.2,rs:60,o:"AI"}
+,{t:"TLN",n:"Talen Energy",s:"Utilities",mc:14,px:250,hi:285,d52:-12,r1m:0,r3m:10,r1y:80,r3y:null,r5y:null,rg5:12,rg3:15,eg5:30,roe:20,gm:32,em:25,nm:12,fm:10,pe:25,pe3:20,dy:0,fy:3,de:1.5,cr:1.3,rs:70,o:"AI"}
+,{t:"BE",n:"Bloom Energy",s:"Industrial",mc:8,px:30,hi:45,d52:-33,r1m:-3,r3m:5,r1y:40,r3y:50,r5y:100,rg5:20,rg3:18,eg5:null,roe:5,gm:25,em:5,nm:-10,fm:-15,pe:500,pe3:60,dy:0,fy:-2,de:1.5,cr:2.0,rs:60,o:"TR"}
+,{t:"ANET",n:"Arista Networks",s:"Technology",mc:140,px:110,hi:130,d52:-15,r1m:-3,r3m:8,r1y:30,r3y:200,r5y:400,rg5:20,rg3:18,eg5:22,roe:35,gm:64,em:42,nm:40,fm:30,pe:38,pe3:30,dy:0,fy:2.5,de:0,cr:4.0,rs:75,o:"AI"}
+,{t:"VRT",n:"Vertiv Holdings",s:"Industrial",mc:60,px:120,hi:155,d52:-22,r1m:-4,r3m:10,r1y:40,r3y:400,r5y:null,rg5:20,rg3:22,eg5:30,roe:40,gm:35,em:18,nm:12,fm:15,pe:35,pe3:25,dy:0.1,fy:2,de:1.0,cr:1.5,rs:70,o:"AI"}
+,{t:"COHR",n:"Coherent",s:"Technology",mc:30,px:90,hi:110,d52:-18,r1m:-2,r3m:15,r1y:60,r3y:100,r5y:150,rg5:15,rg3:14,eg5:25,roe:12,gm:35,em:20,nm:8,fm:7,pe:30,pe3:25,dy:0,fy:2,de:1.2,cr:1.4,rs:70,o:"AI"}
+,{t:"EQIX",n:"Equinix REIT",s:"Finance",mc:90,px:850,hi:950,d52:-11,r1m:0,r3m:5,r1y:10,r3y:30,r5y:50,rg5:10,rg3:9,eg5:12,roe:12,gm:48,em:40,nm:15,fm:8,pe:70,pe3:60,dy:2,fy:3,de:1.2,cr:1.0,rs:60,o:"AI"}
+,{t:"DLR",n:"Digital Realty REIT",s:"Finance",mc:65,px:170,hi:200,d52:-15,r1m:-1,r3m:5,r1y:15,r3y:30,r5y:40,rg5:10,rg3:8,eg5:8,roe:6,gm:45,em:50,nm:12,fm:5,pe:60,pe3:55,dy:3,fy:4,de:1.0,cr:1.0,rs:55,o:"AI"}
+,{t:"SNPS",n:"Synopsys",s:"Technology",mc:80,px:480,hi:600,d52:-20,r1m:-3,r3m:-5,r1y:-10,r3y:60,r5y:200,rg5:12,rg3:10,eg5:18,roe:25,gm:80,em:35,nm:25,fm:25,pe:50,pe3:45,dy:0,fy:2,de:0.1,cr:2.5,rs:50,o:"AI"}
+,{t:"ALAB",n:"Astera Labs",s:"Technology",mc:30,px:120,hi:150,d52:-20,r1m:-3,r3m:15,r1y:50,r3y:null,r5y:null,rg5:60,rg3:60,eg5:null,roe:10,gm:75,em:25,nm:20,fm:18,pe:100,pe3:70,dy:0,fy:1,de:0.05,cr:5.0,rs:75,o:"AI"}
+,{t:"CRWV",n:"CoreWeave",s:"Technology",mc:60,px:100,hi:180,d52:-44,r1m:-8,r3m:10,r1y:null,r3y:null,r5y:null,rg5:100,rg3:100,eg5:null,roe:-20,gm:35,em:25,nm:-20,fm:-50,pe:500,pe3:80,dy:0,fy:-5,de:3.5,cr:0.8,rs:70,o:"AI",ipo:1}
+,{t:"PLTR",n:"Palantir Technologies",s:"Technology",mc:330,px:140,hi:190,d52:-26,r1m:-4,r3m:10,r1y:60,r3y:800,r5y:null,rg5:30,rg3:30,eg5:35,roe:15,gm:80,em:25,nm:20,fm:25,pe:200,pe3:150,dy:0,fy:1,de:0.05,cr:5.0,rs:70,o:"PL"}
+,{t:"AXP",n:"American Express",s:"Finance",mc:210,px:310,hi:340,d52:-9,r1m:0,r3m:5,r1y:25,r3y:80,r5y:150,rg5:10,rg3:9,eg5:14,roe:30,gm:null,em:null,nm:17,fm:null,pe:20,pe3:17,dy:1,fy:5,de:1.8,cr:null,rs:65,o:"PL"}
+,{t:"CMCSA",n:"Comcast",s:"Consumer",mc:130,px:38,hi:45,d52:-16,r1m:-2,r3m:-3,r1y:-10,r3y:-15,r5y:-20,rg5:3,rg3:2,eg5:5,roe:17,gm:70,em:32,nm:13,fm:12,pe:9,pe3:9,dy:3.5,fy:9,de:1.1,cr:0.7,rs:40,o:"PL"}
+,{t:"IBKR",n:"Interactive Brokers",s:"Finance",mc:90,px:220,hi:250,d52:-12,r1m:0,r3m:8,r1y:30,r3y:120,r5y:200,rg5:20,rg3:18,eg5:18,roe:20,gm:null,em:null,nm:70,fm:null,pe:22,pe3:20,dy:0.5,fy:4,de:0.2,cr:null,rs:70,o:"PL"}
+,{t:"PANW",n:"Palo Alto Networks",s:"Technology",mc:130,px:200,hi:210,d52:-5,r1m:0,r3m:10,r1y:25,r3y:150,r5y:300,rg5:20,rg3:18,eg5:22,roe:25,gm:75,em:28,nm:20,fm:30,pe:50,pe3:40,dy:0,fy:3,de:0.3,cr:0.9,rs:70,o:"PL"}
+,{t:"CRWD",n:"CrowdStrike",s:"Technology",mc:110,px:450,hi:520,d52:-13,r1m:-2,r3m:10,r1y:30,r3y:200,r5y:400,rg5:30,rg3:28,eg5:35,roe:12,gm:75,em:22,nm:12,fm:30,pe:90,pe3:70,dy:0,fy:2,de:0.2,cr:1.7,rs:65,o:"PL"}
+,{t:"RBLX",n:"Roblox",s:"Technology",mc:60,px:100,hi:140,d52:-28,r1m:-4,r3m:8,r1y:30,r3y:50,r5y:null,rg5:25,rg3:22,eg5:null,roe:-30,gm:75,em:5,nm:-15,fm:10,pe:500,pe3:80,dy:0,fy:2,de:0.8,cr:1.2,rs:55,o:"PL"}
+,{t:"JBL",n:"Jabil",s:"Technology",mc:22,px:180,hi:220,d52:-18,r1m:-2,r3m:10,r1y:50,r3y:150,r5y:250,rg5:5,rg3:6,eg5:15,roe:40,gm:8,em:6,nm:3,fm:4,pe:20,pe3:15,dy:0.3,fy:5,de:1.5,cr:1.0,rs:70,o:"TR"}
+,{t:"HOOD",n:"Robinhood Markets",s:"Finance",mc:70,px:80,hi:100,d52:-20,r1m:-3,r3m:15,r1y:100,r3y:200,r5y:null,rg5:40,rg3:35,eg5:null,roe:15,gm:null,em:null,nm:40,fm:35,pe:40,pe3:30,dy:0,fy:3,de:0.3,cr:null,rs:75,o:"TR"}
+,{t:"RKLB",n:"Rocket Lab",s:"Industrial",mc:25,px:25,hi:35,d52:-28,r1m:-4,r3m:10,r1y:80,r3y:200,r5y:null,rg5:30,rg3:30,eg5:null,roe:-25,gm:30,em:-5,nm:-20,fm:-20,pe:500,pe3:80,dy:0,fy:-3,de:0.6,cr:2.5,rs:70,o:"TR"}
+,{t:"ASTS",n:"AST SpaceMobile",s:"Industrial",mc:15,px:30,hi:55,d52:-45,r1m:-6,r3m:5,r1y:60,r3y:300,r5y:null,rg5:null,rg3:null,eg5:null,roe:-30,gm:null,em:null,nm:-200,fm:-150,pe:500,pe3:80,dy:0,fy:-8,de:0.8,cr:3.0,rs:65,o:"TR"}
+,{t:"OKLO",n:"Oklo",s:"Utilities",mc:12,px:50,hi:70,d52:-28,r1m:-5,r3m:10,r1y:120,r3y:null,r5y:null,rg5:null,rg3:null,eg5:null,roe:-20,gm:null,em:null,nm:-300,fm:-200,pe:500,pe3:80,dy:0,fy:-10,de:0.1,cr:5.0,rs:70,o:"TR"}
+];
+
+/* ===== STRATEGIES: weights [G,Q,V,M,R] ===== */
+const STRATS={
+ balanced:{name:"GEAR+ Balanced",tag:"25·25·20·20·10",w:[25,25,20,20,10]},
+ growth:{name:"Aggressive Growth",tag:"40·20·5·30·5",w:[40,20,5,30,5]},
+ quality:{name:"Quality Compounder",tag:"20·45·15·15·5",w:[20,45,15,15,5]},
+ value:{name:"Deep Value",tag:"10·20·50·5·15",w:[10,20,50,5,15]},
+ momentum:{name:"Momentum Breakout",tag:"10·15·5·60·10",w:[10,15,5,60,10]},
+ garp:{name:"GARP",tag:"30·25·30·10·5",w:[30,25,30,10,5]},
+ fallen:{name:"Fallen Angel",tag:"10·35·35·5·15",w:[10,35,35,5,15]},
+ defensive:{name:"Defensive Income",tag:"10·30·20·10·30",w:[10,30,20,10,30]},
+ allweather:{name:"All-Weather",tag:"20·25·20·15·20",w:[20,25,20,15,20]},
+ rocket:{name:"Small-Cap Rocket",tag:"35·15·5·40·5",w:[35,15,5,40,5]}
+};
+const FNAMES=["Growth","Quality","Value","Momentum","Risk Shield"];
+const FSHORT=["G","Q","V","M","R"];
+
+/* ===== compute raw factor inputs per stock ===== */
+function wavg(pairs){ // pairs: [val,weight] ignoring null vals
+  let s=0,w=0; for(const[v,wt]of pairs){ if(v!=null&&!isNaN(v)){s+=v*wt;w+=wt;} } return w?s/w:null;
+}
+function rawFactors(d){
+  const g = wavg([[d.rg5,.4],[d.rg3,.35],[d.eg5,.25]]);
+  const roeC = Math.min(d.roe,60); // cap buyback-distorted ROE
+  const q = wavg([[roeC,.30],[d.gm,.20],[d.em,.20],[d.fm,.20],[d.nm,.10]]);
+  const v = wavg([[d.fy,1.0],[d.dy,.8],[(50-Math.min(d.pe,80)),.4],[(40-Math.min(d.pe3,60)),.3]]);
+  const r1yC=Math.max(Math.min(d.r1y,400),-90);
+  const m = (r1yC*.35)+(d.r3m*.30)+(d.r1m*.35)+((d.rs-50)*1.0);
+  const r = wavg([[d.cr,15],[(2-Math.min(d.de==null?1:d.de,5)),12],[d.fm,.5],[d.nm,.5]]);
+  return [g,q,v,m,r];
+}
+// build raw matrix
+// percentile rank each column -> 0..100
+function pctRank(arr){
+  const valid=arr.map((v,i)=>({v,i})).filter(o=>o.v!=null&&!isNaN(o.v));
+  const sorted=[...valid].sort((a,b)=>a.v-b.v);
+  const n=sorted.length;
+  const out=new Array(arr.length).fill(50);
+  sorted.forEach((o,idx)=>{ out[o.i]= n<=1?50: Math.round(idx/(n-1)*100); });
+  return out;
+}
+function recompute(){
+  const RF=RAW.map(rawFactors);
+  const cols=[0,1,2,3,4].map(c=>pctRank(RF.map(r=>r[c])));
+  RAW.forEach((d,i)=>{ d.f=[0,1,2,3,4].map(c=>cols[c][i]); });
+}
+recompute();
+
+function alphaFor(d,wkey){
+  const w=STRATS[wkey].w, sw=w.reduce((a,b)=>a+b,0);
+  let s=0; for(let k=0;k<5;k++) s+=d.f[k]*w[k];
+  return Math.round(s/sw);
+}
+function tierOf(a){ return a>=82?"S":a>=70?"A":a>=58?"B":a>=45?"C":"D"; }
+const TIERVERDICT={
+  S:{txt:"โหดทุกด้าน — Alpha สูงสุด",col:"var(--S)"},
+  A:{txt:"น่าสนใจมาก — พิจารณาเข้า",col:"var(--A)"},
+  B:{txt:"ดี — เฝ้าดู รอจังหวะ",col:"var(--B)"},
+  C:{txt:"กลางๆ — ต้องมีเหตุผลเฉพาะตัว",col:"var(--C)"},
+  D:{txt:"อ่อน — หลีกเลี่ยง / เก็งกำไรเท่านั้น",col:"var(--D)"}
+};
+
+/* ===== heatmap color for 0..100 score ===== */
+function heat(v){
+  if(v>=70) return "var(--good)";
+  if(v>=55) return "#4a7d3e";
+  if(v>=45) return "#6b6230";
+  if(v>=30) return "#7a4a2a";
+  return "var(--bad)";
+}
+function scoreColor(v){ return v>=70?"var(--green)":v>=45?"var(--mute)":v>=30?"var(--amber)":"var(--red)"; }
+
+/* ===== auto SWOT generator ===== */
+function swot(d){
+  const S=[],W=[],O=[],T=[];
+  const num=x=>x>0?"+"+x:""+x;
+  // strengths
+  if(d.roe>=25) S.push(`ROE <b>${d.roe}%</b> — ใช้ทุนมีประสิทธิภาพ moat แข็ง`);
+  if(d.gm>=55) S.push(`Gross margin <b>${d.gm}%</b> — pricing power สูง`);
+  if(d.rg5>=18) S.push(`รายได้โต 5Y <b>${num(d.rg5)}%/yr</b> — top-line momentum`);
+  if(d.eg5!=null&&d.eg5>=15) S.push(`EPS โต 5Y <b>${num(d.eg5)}%/yr</b> — กำไรขยายต่อเนื่อง`);
+  if(d.fm>=20) S.push(`FCF margin <b>${d.fm}%</b> — เครื่องปั๊มเงินสด`);
+  if(d.de!=null&&d.de<=0.4) S.push(`Debt/Equity <b>${d.de}</b> — งบดุลสะอาด`);
+  if(d.f[2]>=75) S.push(`Value percentile <b>${d.f[2]}</b> — ถูกเทียบ peer`);
+  if(d.mc>=500&&S.length<5) S.push(`Mega cap <b>$${d.mc}B</b> — ทนแรงกดตลาดได้ดี`);
+  // weaknesses
+  if(d.rg5<5) W.push(`รายได้โตช้า <b>${num(d.rg5)}%/yr</b>`);
+  if(d.eg5!=null&&d.eg5<0) W.push(`EPS หด <b>${d.eg5}%/yr</b> — กำไรถดถอย`);
+  if(d.roe<10) W.push(`ROE ต่ำ <b>${d.roe}%</b> — return on capital อ่อน`);
+  if(d.gm<20) W.push(`Gross margin บาง <b>${d.gm}%</b>`);
+  if(d.fm<0) W.push(`FCF ติดลบ <b>${d.fm}%</b> — เผาเงินสด`);
+  if(d.de!=null&&d.de>=3) W.push(`Debt/Equity สูง <b>${d.de}</b> — เลเวอเรจหนัก`);
+  if(d.nm<0) W.push(`Net margin ติดลบ <b>${d.nm}%</b>`);
+  if(d.f[1]<35&&W.length<4) W.push(`Quality percentile ต่ำ <b>${d.f[1]}</b>`);
+  // opportunities
+  if(d.d52<=-30) O.push(`ราคาร่วง <b>${d.d52}%</b> จาก 52WH — valuation compression เปิดโอกาส`);
+  if(d.f[2]>=65&&d.f[1]>=60) O.push(`ของดีราคาถูก — quality+value ซ้อนกัน`);
+  if(d.r1m>0&&d.d52<=-25) O.push(`เริ่มมีแรงซื้อกลับ (1M <b>+${d.r1m}%</b>) หลังลงลึก`);
+  if(d.f[3]>=80) O.push(`Momentum/RS แรง (RS <b>${d.rs}</b>) — trend ยังวิ่ง`);
+  // threats
+  if(d.pe>=60) T.push(`P/E <b>${d.pe}x</b> — แพง ไม่มี margin of safety`);
+  if(d.d52<=-40) T.push(`ร่วงหนัก <b>${d.d52}%</b> — เสี่ยง fundamental เสื่อม`);
+  if(d.f[3]<30) T.push(`Momentum อ่อน <b>${d.f[3]}</b> — ตลาดยังไม่เอา`);
+  if(d.nm<0) T.push(`ขาดทุนสุทธิ — เสี่ยง dilution / ก่อหนี้`);
+  if(d.de!=null&&d.de>=4) T.push(`เลเวอเรจสูงมาก <b>${d.de}</b> — เปราะต่อดอกเบี้ย`);
+  if(T.length<2) T.push(`Macro — เงินเฟ้อ/ดอกเบี้ย/geopolitics กระทบตลาดโดยรวม`);
+  return {S:S.slice(0,6),W:W.slice(0,5),O:O.slice(0,4),T:T.slice(0,3)};
+}
+
+/* =========================================================
+   STATE + RENDER
+   ========================================================= */
+let state={strat:"value",sort:"alpha",dir:-1,search:"",sector:"",mcap:0,pe:200,rs:0,tier:0,dmin:0,dmax:100,sel:null};
+
+// populate sector select
+[...new Set(RAW.map(d=>d.s))].sort().forEach(s=>{
+  const o=document.createElement("option");o.value=s;o.textContent=s;document.getElementById("fSector").appendChild(o);
+});
+// strategy chips
+const sc=document.getElementById("stratChips");
+Object.entries(STRATS).forEach(([k,v])=>{
+  const b=document.createElement("button");
+  b.className="chip"+(k==="value"?" on":"");b.dataset.k=k;
+  b.innerHTML=`${v.name}<small>${v.tag}</small>`;
+  b.onclick=()=>{state.strat=k;state.sel=null;[...sc.children].forEach(c=>c.classList.toggle("on",c.dataset.k===k));render();};
+  sc.appendChild(b);
+});
+
+// columns def
+const COLS=[
+ {k:"rank",lbl:"#",cls:"l",sortable:false},
+ {k:"tier",lbl:"Tier",cls:"l",sortable:true},
+ {k:"t",lbl:"Ticker",cls:"l",sortable:true},
+ {k:"s",lbl:"Sector",cls:"l",sortable:true},
+ {k:"alpha",lbl:"Alpha",sortable:true},
+ {k:"f0",lbl:"Grow",sortable:true},
+ {k:"f1",lbl:"Qual",sortable:true},
+ {k:"f2",lbl:"Value",sortable:true},
+ {k:"f3",lbl:"Mom",sortable:true},
+ {k:"f4",lbl:"Risk",sortable:true},
+ {k:"px",lbl:"Price",sortable:true},
+ {k:"d52",lbl:"52WH",sortable:true},
+ {k:"pe",lbl:"P/E",sortable:true},
+ {k:"rs",lbl:"RS",sortable:true},
+ {k:"rf",lbl:"🚩RF",sortable:true}
+];
+
+function getVal(d,k){
+  if(k==="alpha")return alphaFor(d,state.strat);
+  if(k==="tier")return alphaFor(d,state.strat);
+  if(k==="rf")return redFlag(d).score;
+  if(k.startsWith("f"))return d.f[+k[1]];
+  return d[k];
+}
+function passFilter(d){
+  if(state.search){const q=state.search.toLowerCase();if(!d.t.toLowerCase().includes(q)&&!d.n.toLowerCase().includes(q))return false;}
+  if(state.sector&&d.s!==state.sector)return false;
+  if(d.mc<state.mcap)return false;
+  if(d.pe>state.pe)return false;
+  if(d.rs<state.rs)return false;
+  const drop=Math.abs(d.d52);
+  if(drop<state.dmin||drop>state.dmax)return false;
+  if(alphaFor(d,state.strat)<state.tier)return false;
+  return true;
+}
+
+function render(){
+  const list=RAW.filter(passFilter).map(d=>({d,a:alphaFor(d,state.strat)}));
+  // sort
+  list.sort((x,y)=>{
+    let va,vb;
+    if(state.sort==="alpha"||state.sort==="tier"){va=x.a;vb=y.a;}
+    else if(state.sort==="t"||state.sort==="s"){va=x.d[state.sort];vb=y.d[state.sort];return state.dir*(va<vb?-1:va>vb?1:0);}
+    else va=getVal(x.d,state.sort),vb=getVal(y.d,state.sort);
+    return state.dir*((va||0)-(vb||0));
+  });
+
+  // KPI
+  const dist={S:0,A:0,B:0,C:0,D:0};
+  list.forEach(o=>dist[tierOf(o.a)]++);
+  const kp=document.getElementById("kpis");
+  kp.innerHTML=`
+    <div class="kpi"><div class="n">${list.length}</div><div class="l">หุ้นที่ผ่านfilter</div></div>
+    <div class="kpi tS"><div class="n">${dist.S}</div><div class="l">S-Tier</div></div>
+    <div class="kpi tA"><div class="n">${dist.A}</div><div class="l">A-Tier</div></div>
+    <div class="kpi tB"><div class="n">${dist.B}</div><div class="l">B-Tier</div></div>
+    <div class="kpi tC"><div class="n">${dist.C}</div><div class="l">C-Tier</div></div>
+    <div class="kpi tD"><div class="n">${dist.D}</div><div class="l">D-Tier</div></div>`;
+
+  // head
+  const th=document.getElementById("thead");
+  th.innerHTML=COLS.map(c=>{
+    const active=state.sort===c.k;
+    const ar=active?`<span class="ar">${state.dir<0?"▼":"▲"}</span>`:"";
+    return `<th class="${c.cls||""}" data-k="${c.k}" ${c.sortable===false?'style="cursor:default"':""}>${c.lbl} ${ar}</th>`;
+  }).join("");
+  th.querySelectorAll("th").forEach(el=>{
+    const c=COLS.find(x=>x.k===el.dataset.k);
+    if(c&&c.sortable!==false)el.onclick=()=>{
+      if(state.sort===el.dataset.k)state.dir*=-1;
+      else{state.sort=el.dataset.k;state.dir=(el.dataset.k==="t"||el.dataset.k==="s")?1:-1;}
+      render();
+    };
+  });
+
+  // body
+  const tb=document.getElementById("tbody");
+  if(!list.length){tb.innerHTML=`<tr><td colspan="${COLS.length}" class="empty">ไม่มีหุ้นเข้าเกณฑ์ — ลองคลาย filter (ลด min tier / ขยายช่วง drop / ลด min RS)</td></tr>`;document.getElementById("drill").style.display="none";return;}
+  tb.innerHTML=list.map((o,i)=>{
+    const d=o.d,a=o.a,tr=tierOf(a);const rf=redFlag(d);
+    const fbar=k=>`<td><div class="fbar"><span class="fn" style="color:${scoreColor(d.f[k])}">${d.f[k]}</span><div class="ft"><i style="width:${d.f[k]}%;background:${heat(d.f[k])}"></i></div></div></td>`;
+    const d52c=d.d52<=-1?"neg":d.d52>=1?"pos":"neu";
+    const rsc=d.rs>=80?"pos":d.rs>=50?"neu":"neg";
+    return `<tr data-t="${d.t}" class="${state.sel===d.t?'sel':''}">
+      <td class="rank">${i+1}</td>
+      <td class="l"><span class="tier-badge b-${tr}">${tr}</span></td>
+      <td class="tk"><div class="sym">${d.t}${d.ipo?'<span class="ipo-tag">IPO</span>':''}${LEADERSHIP2[d.t]?'<span class="l12tag">⬢12</span>':''}</div><div class="nm">${d.n}</div></td>
+      <td class="sec">${d.s}</td>
+      <td class="alpha"><span class="av" style="color:${TIERVERDICT[tr].col}">${a}</span></td>
+      ${fbar(0)}${fbar(1)}${fbar(2)}${fbar(3)}${fbar(4)}
+      <td class="mono">$${d.px}</td>
+      <td class="mono ${d52c}">${d.d52}%</td>
+      <td class="mono ${d.pe>=50?'neg':d.pe<=15?'pos':'neu'}">${d.pe}x</td>
+      <td class="rs"><span class="rsv ${rsc}">${d.rs}</span></td>
+      <td class="mono"><span class="rfchip" style="color:${rfColor(rf.score)};border-color:${rfColor(rf.score)}44">${rf.score}</span></td>
+    </tr>`;
+  }).join("");
+  tb.querySelectorAll("tr[data-t]").forEach(row=>{
+    row.onclick=()=>{state.sel=row.dataset.t;render();drill(row.dataset.t);};
+  });
+
+  if(state.sel&&list.find(o=>o.d.t===state.sel))drill(state.sel);
+  else document.getElementById("drill").style.display="none";
+}
+
+/* ===== drill-down panel ===== */
+function drill(tk){
+  const d=RAW.find(x=>x.t===tk);if(!d)return;
+  const a=alphaFor(d,state.strat),tr=tierOf(a),vd=TIERVERDICT[tr],sw=swot(d);
+  const rf=redFlag(d);
+  const fcell=k=>`<div class="fcell"><div class="fl">${FNAMES[k]}</div><div class="fv" style="color:${scoreColor(d.f[k])}">${d.f[k]}</div><div class="fb"><i style="width:${d.f[k]}%;background:${heat(d.f[k])}"></i></div></div>`;
+  const li=(arr)=>arr.length?`<ul>${arr.map(s=>`<li>${s}</li>`).join("")}</ul>`:`<div class="none">— ไม่มีข้อมูลเด่นในมิตินี้ —</div>`;
+  const km=(l,v,c)=>`<div class="km"><div class="kl">${l}</div><div class="kv" ${c?`style="color:${c}"`:""}>${v}</div></div>`;
+  const g=x=>x==null?"—":(x>0?"+"+x:""+x);
+  const el=document.getElementById("drill");
+  el.style.display="block";
+  el.innerHTML=`<div class="dpanel">
+    <div class="dhead">
+      <div class="left">
+        <span class="tier-badge b-${tr}">${tr}</span>
+        <div>
+          <div class="sym">${d.t}${d.ipo?'<span class="ipo-tag">IPO</span>':''}${LEADERSHIP2[d.t]?'<span class="l12tag">⬢12</span>':''}</div>
+          <div class="nm">${d.n} · ${d.s}</div>
+          <div class="verdict" style="color:${vd.col}">${vd.txt}</div>
+          <div class="meta">Alpha <b>${a}</b> (${STRATS[state.strat].name}) · ราคา <b>$${d.px}</b> · ร่วง <b>${d.d52}%</b> จาก 52WH · MCap <b>$${d.mc}B</b>${d.o?` · จาก <b>${ORIG[d.o]||d.o}</b>`:""}</div>
+        </div>
+      </div>
+      <button class="dclose" onclick="state.sel=null;document.getElementById('drill').style.display='none';render();">✕ ปิด</button>
+    </div>
+    <div class="factor-row">${[0,1,2,3,4].map(fcell).join("")}</div>
+    <div class="chartwrap">
+      <div class="label">Price · Net Margin · P/E — กราฟ 3 ชั้น (5Y)</div>
+      <div class="chartbox"><canvas id="histChart"></canvas></div>
+      <div class="chartnote" id="chartNote"></div>
+    </div>
+    <div class="forensic">
+      <div class="label">🚩 Red Flag Detector & Leadership</div>
+      <div class="frow">
+        <div class="fscore"><div class="fsl">Red Flag</div><div class="fsv" style="color:${rfColor(rf.score)}">${rf.score}<span>/10</span></div></div>
+        <div class="fscore"><div class="fsl">Leadership</div><div class="fsv" style="color:${leadColor(rf.lead)}">${rf.lead}<span>/10</span></div></div>
+        <div class="frep"><span class="repbadge" style="color:${repColor(rf.rep)};border-color:${repColor(rf.rep)}55">${rf.rep}</span><span class="vbadge ${rf.v?'ver':''}">${rf.v?'✓ web-verified':'financials / public record'}</span></div>
+      </div>
+      <div class="fnote">${rf.note}</div>
+      <div class="fflags">${rf.flags.length?rf.flags.map(ff=>`<div class="ff"><span class="ffsev" style="background:${rfColor(ff.s)}">${ff.s}</span><span class="ffcat">${ff.c}</span><span class="ffwhy">${ff.w}</span></div>`).join(""):'<div class="none">— ไม่มี red flag เด่นจากเกณฑ์ —</div>'}</div>
+      <div class="fcite"><b>อ้างอิง:</b> ${rf.cite}</div>
+    </div>
+    ${renderLeadership(d)}
+    <div class="swot">
+      <div class="sq str"><h4>Strengths — จุดแข็ง <span class="cnt">${sw.S.length} ข้อ</span></h4>${li(sw.S)}</div>
+      <div class="sq wk"><h4>Weaknesses — จุดอ่อน <span class="cnt">${sw.W.length} ข้อ</span></h4>${li(sw.W)}</div>
+      <div class="sq opp"><h4>Opportunities — โอกาส <span class="cnt">${sw.O.length} ข้อ</span></h4>${li(sw.O)}</div>
+      <div class="sq thr"><h4>Threats — ความเสี่ยง <span class="cnt">${sw.T.length} ข้อ</span></h4>${li(sw.T)}</div>
+    </div>
+    <div class="keymetrics">
+      <div class="label">Key Metrics — งบการเงินหลัก</div>
+      <div class="km-grid">
+        ${km("P/E Fwd",d.pe+"x",d.pe>=50?'var(--red)':d.pe<=15?'var(--green)':null)}
+        ${km("P/E +3Y",d.pe3+"x")}
+        ${km("ROE",d.roe+"%",d.roe>=25?'var(--green)':d.roe<10?'var(--red)':null)}
+        ${km("Gross Margin",d.gm+"%")}
+        ${km("EBITDA %",d.em+"%")}
+        ${km("Net Margin",d.nm+"%",d.nm<0?'var(--red)':null)}
+        ${km("FCF Margin",d.fm+"%",d.fm<0?'var(--red)':d.fm>=20?'var(--green)':null)}
+        ${km("Rev 5Y",g(d.rg5)+"%",d.rg5>=15?'var(--green)':d.rg5<5?'var(--red)':null)}
+        ${km("EPS 5Y",g(d.eg5)+(d.eg5==null?"":"%"),d.eg5!=null&&d.eg5<0?'var(--red)':d.eg5!=null&&d.eg5>=15?'var(--green)':null)}
+        ${km("Div Yield",d.dy+"%")}
+        ${km("FCF Yield",d.fy+"%")}
+        ${km("Debt/Eq",d.de==null?"—":d.de,d.de!=null&&d.de>=3?'var(--red)':null)}
+        ${km("RS",d.rs,d.rs>=80?'var(--green)':d.rs<40?'var(--red)':null)}
+        ${km("1Y Return",g(d.r1y)+"%",d.r1y>0?'var(--green)':'var(--red)')}
+      </div>
+    </div>
+  </div>`;
+  renderHistChart(d); if(window.FINN&&FINN.on&&FINN.key) fetchMetricLive(d);
+  el.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+/* ===== wire filters ===== */
+const $=id=>document.getElementById(id);
+$("fSearch").oninput=e=>{state.search=e.target.value;state.sel=null;render();};
+$("fSector").onchange=e=>{state.sector=e.target.value;render();};
+$("fMcap").oninput=e=>{state.mcap=+e.target.value;$("fMcapV").textContent=e.target.value;render();};
+$("fPe").oninput=e=>{state.pe=+e.target.value;$("fPeV").textContent=(+e.target.value>=200?"∞":e.target.value);render();};
+$("fRs").oninput=e=>{state.rs=+e.target.value;$("fRsV").textContent=e.target.value;render();};
+$("fTier").onchange=e=>{state.tier=+e.target.value;render();};
+document.querySelectorAll(".dp").forEach(b=>{
+  if(b.id==="dpAll")b.style.display="none";
+  b.onclick=()=>{
+    document.querySelectorAll(".dp").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    state.dmin=+b.dataset.min;state.dmax=+b.dataset.max;render();
+  };
+});
+$("resetBtn").onclick=()=>{
+  state={...state,search:"",sector:"",mcap:0,pe:200,rs:0,tier:0,dmin:0,dmax:100,sel:null};
+  $("fSearch").value="";$("fSector").value="";$("fMcap").value=0;$("fMcapV").textContent="0";
+  $("fPe").value=200;$("fPeV").textContent="∞";$("fRs").value=0;$("fRsV").textContent="0";$("fTier").value="0";
+  document.querySelectorAll(".dp").forEach(x=>x.classList.remove("on"));
+  document.querySelector('.dp[data-min="0"][data-max="100"]:not(#dpAll)').classList.add("on");
+  document.getElementById("drill").style.display="none";
+  render();
+};
+
+/* =========================================================
+   LEADERSHIP SCORECARD — 12 dimensions, web-cited.
+   score 1..10 (10=best) or "N/A" = no verified fact (no assumption).
+   Built by GEAR+ tier order: S → A → B → C → D.
+   DONE: NVDA (S) · AVGO TSM MU LLY HOOD (A)
+   ========================================================= */
+const LDIMS=[["ceo","1 · CEO Track Record"],["cfo","2 · CFO Credibility"],["guide","3 · Guidance Accuracy"],["transp","4 · Transparency"],["capalloc","5 · Capital Allocation"],["ma","6 · Acquisitions (M&A)"],["buyback","7 · Buybacks"],["dilution","8 · Dilution / SBC"],["insider","9 · Insider Ownership"],["comp","10 · Compensation"],["board","11 · Board Quality"],["comms","12 · Communication Style"]];
+const LOWN={YES:{t:"\u0e17\u0e33\u0e15\u0e31\u0e27\u0e40\u0e1b\u0e47\u0e19\u0e40\u0e08\u0e49\u0e32\u0e02\u0e2d\u0e07\u0e23\u0e30\u0e22\u0e30\u0e22\u0e32\u0e27",c:"var(--green)"},PARTIAL:{t:"\u0e01\u0e36\u0e48\u0e07\u0e40\u0e08\u0e49\u0e32\u0e02\u0e2d\u0e07 \u2014 \u0e21\u0e35\u0e08\u0e38\u0e14\u0e02\u0e31\u0e14\u0e41\u0e22\u0e49\u0e07",c:"#C9A961"},NO:{t:"\u0e44\u0e21\u0e48\u0e04\u0e48\u0e2d\u0e22\u0e40\u0e1b\u0e47\u0e19\u0e40\u0e08\u0e49\u0e32\u0e02\u0e2d\u0e07",c:"var(--red)"}};
+const LEADERSHIP2={
+ NVDA:{own:"YES",d:{
+  ceo:{s:9,t:"Jensen Huang \u2014 founder-CEO 30+ \u0e1b\u0e35, \u0e2a\u0e23\u0e49\u0e32\u0e07\u0e1a\u0e23\u0e34\u0e29\u0e31\u0e17 $4T, execution \u0e23\u0e30\u0e14\u0e31\u0e1a\u0e15\u0e33\u0e19\u0e32\u0e19",c:"Fortune 2025\u201326"},
+  cfo:{s:9,t:"Colette Kress \u2014 CFO \u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48 2013, \u0e21\u0e2d\u0e07\u0e02\u0e32\u0e14 AI \u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48 2018, credible \u0e2a\u0e39\u0e07",c:"Finance-Monthly Jan-2026"},
+  guide:{s:8,t:"beat-and-raise \u0e15\u0e48\u0e2d\u0e40\u0e19\u0e37\u0e48\u0e2d\u0e07; FY25 rev $130.5B op income $86.8B",c:"Fortune/SEC (earnings record)"},
+  transp:{s:8,t:"\u0e1b\u0e23\u0e31\u0e1a reporting framework \u0e43\u0e2b\u0e21\u0e48\u0e15\u0e32\u0e21 AI, comms \u0e0a\u0e31\u0e14",c:"Motley Fool May-2026"},
+  capalloc:{s:8,t:"R&D-first + buyback $50B + \u0e02\u0e36\u0e49\u0e19\u0e1b\u0e31\u0e19\u0e1c\u0e25\u0e40\u0e1b\u0e47\u0e19 $0.25",c:"AInvest/Fool 2025\u201326"},
+  ma:{s:7,t:"\u0e42\u0e15\u0e41\u0e1a\u0e1a organic \u0e40\u0e1b\u0e47\u0e19\u0e2b\u0e25\u0e31\u0e01; \u0e14\u0e35\u0e25 ARM ($40B) \u0e22\u0e01\u0e40\u0e25\u0e34\u0e01\u0e2d\u0e22\u0e48\u0e32\u0e07\u0e21\u0e35\u0e27\u0e34\u0e19\u0e31\u0e22\u0e1b\u0e35 2022",c:"public record"},
+  buyback:{s:8,t:"\u0e2d\u0e19\u0e38\u0e21\u0e31\u0e15\u0e34 buyback \u0e40\u0e1e\u0e34\u0e48\u0e21 $50B \u0e2a.\u0e04. 2024; \u0e04\u0e37\u0e19\u0e17\u0e38\u0e19 $15.4B/\u0e44\u0e15\u0e23\u0e21\u0e32\u0e2a",c:"AInvest Aug-2025"},
+  dilution:{s:5,t:"SBC \u0e2a\u0e39\u0e07 (~$4B/\u0e1b\u0e35) \u0e41\u0e15\u0e48 buyback \u0e2b\u0e31\u0e01\u0e25\u0e49\u0e32\u0e07\u0e44\u0e14\u0e49\u0e1a\u0e32\u0e07\u0e2a\u0e48\u0e27\u0e19",c:"financials"},
+  insider:{s:6,t:"Huang \u0e16\u0e37\u0e2d ~3.5% (aligned) \u0e41\u0e15\u0e48\u0e02\u0e32\u0e22\u0e2b\u0e19\u0e31\u0e01\u0e1c\u0e48\u0e32\u0e19 10b5-1; insider sell:buy = 15:0",c:"TECHi/SEC Form 4 Apr-2026"},
+  comp:{s:6,t:"FY25 ~$50M, FY26 ~$36M; flag: \u0e25\u0e39\u0e01\u0e2a\u0e32\u0e27/\u0e25\u0e39\u0e01\u0e0a\u0e32\u0e22\u0e17\u0e33\u0e07\u0e32\u0e19\u0e43\u0e19\u0e1a\u0e23\u0e34\u0e29\u0e31\u0e17 (nepotism)",c:"Fortune 2025\u201326"},
+  board:{s:"N/A",t:"\u0e21\u0e35 director \u0e2d\u0e32\u0e22\u0e38\u0e07\u0e32\u0e19\u0e22\u0e32\u0e27 (Mark Stevens VC); independence \u0e44\u0e21\u0e48\u0e44\u0e14\u0e49\u0e1b\u0e23\u0e30\u0e40\u0e21\u0e34\u0e19\u0e2d\u0e34\u0e2a\u0e23\u0e30",c:"N/A"},
+  comms:{s:9,t:"keynote Jensen \u0e23\u0e30\u0e14\u0e31\u0e1a\u0e15\u0e33\u0e19\u0e32\u0e19, \u0e2a\u0e37\u0e48\u0e2d\u0e2a\u0e32\u0e23\u0e27\u0e34\u0e2a\u0e31\u0e22\u0e17\u0e31\u0e28\u0e19\u0e4c\u0e0a\u0e31\u0e14",c:"public record"}}},
+ AVGO:{own:"PARTIAL",d:{
+  ceo:{s:9,t:"Hock Tan \u2014 capital allocator \u0e0a\u0e31\u0e49\u0e19\u0e40\u0e0b\u0e35\u0e22\u0e19, serial M&A \u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08, TSR \u0e21\u0e2b\u0e32\u0e28\u0e32\u0e25",c:"ValueSense/SEC Mar-2026"},
+  cfo:{s:6,t:"Kirsten Spears \u2014 credible (CFO \u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48 2020) \u0e41\u0e15\u0e48\u0e1b\u0e23\u0e30\u0e01\u0e32\u0e28\u0e40\u0e01\u0e29\u0e35\u0e22\u0e13 \u0e21\u0e35\u0e1c\u0e25 12 \u0e21\u0e34.\u0e22. 2026 = transition",c:"SimplyWallSt/SEC Mar-2026"},
+  guide:{s:6,t:"\u0e42\u0e14\u0e22\u0e23\u0e27\u0e21\u0e40\u0e02\u0e49\u0e32\u0e40\u0e1b\u0e49\u0e32 \u0e41\u0e15\u0e48 AI-guidance \u0e17\u0e33\u0e15\u0e25\u0e32\u0e14\u0e1c\u0e31\u0e19\u0e1c\u0e27\u0e19 \u0e21\u0e34.\u0e22. 2025",c:"public record"},
+  transp:{s:7,t:"\u0e15\u0e31\u0e49\u0e07\u0e40\u0e1b\u0e49\u0e32 AI revenue \u0e0a\u0e31\u0e14 $90-120B (2028-30) \u2014 \u0e42\u0e1b\u0e23\u0e48\u0e07\u0e43\u0e2a\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07\u0e40\u0e1b\u0e49\u0e32",c:"GuruFocus Mar-2026"},
+  capalloc:{s:9,t:"M&A \u0e2a\u0e23\u0e49\u0e32\u0e07\u0e21\u0e39\u0e25\u0e04\u0e48\u0e32\u0e15\u0e48\u0e2d\u0e40\u0e19\u0e37\u0e48\u0e2d\u0e07 (VMware/CA/Symantec) + \u0e1b\u0e31\u0e19\u0e1c\u0e25\u0e42\u0e15 + buyback",c:"public record"},
+  ma:{s:8,t:"VMware $69B + serial deals; integrate \u0e40\u0e01\u0e48\u0e07 \u0e41\u0e15\u0e48\u0e02\u0e36\u0e49\u0e19\u0e23\u0e32\u0e04\u0e32\u0e25\u0e39\u0e01\u0e04\u0e49\u0e32\u0e2b\u0e25\u0e31\u0e07\u0e14\u0e35\u0e25 (\u0e14\u0e23\u0e32\u0e21\u0e48\u0e32)",c:"public record"},
+  buyback:{s:7,t:"buyback + \u0e1b\u0e31\u0e19\u0e1c\u0e25\u0e42\u0e15\u0e15\u0e48\u0e2d\u0e40\u0e19\u0e37\u0e48\u0e2d\u0e07",c:"financials"},
+  dilution:{s:6,t:"equity grant CEO $202M \u0e1b\u0e35 2025 = dilution \u0e41\u0e15\u0e48 buyback \u0e0a\u0e14\u0e40\u0e0a\u0e22",c:"Yahoo/SEC Mar-2026"},
+  insider:{s:6,t:"Tan \u0e25\u0e14\u0e2b\u0e38\u0e49\u0e19\u0e08\u0e32\u0e01 1.84M \u0e40\u0e2b\u0e25\u0e37\u0e2d 978k; insider \u0e02\u0e32\u0e22\u0e2a\u0e38\u0e17\u0e18\u0e34 ~$405M \u0e43\u0e19 12 \u0e40\u0e14\u0e37\u0e2d\u0e19",c:"SimplyWallSt 2026"},
+  comp:{s:4,t:"$205.3M \u0e1b\u0e35 2025 (\u0e40\u0e01\u0e37\u0e2d\u0e1a\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14 equity) \u2014 \u0e2a\u0e39\u0e07\u0e21\u0e32\u0e01, governance flag",c:"SeekingAlpha/SEC Mar-2026"},
+  board:{s:"N/A",t:"director Harry You \u0e40\u0e04\u0e22\u0e0b\u0e37\u0e49\u0e2d\u0e2b\u0e38\u0e49\u0e19 (rare aligned buy); \u0e44\u0e21\u0e48\u0e44\u0e14\u0e49\u0e1b\u0e23\u0e30\u0e40\u0e21\u0e34\u0e19\u0e40\u0e15\u0e47\u0e21",c:"N/A"},
+  comms:{s:7,t:"Tan \u0e15\u0e23\u0e07\u0e44\u0e1b\u0e15\u0e23\u0e07\u0e21\u0e32\u0e1a\u0e19 call, \u0e15\u0e31\u0e49\u0e07\u0e40\u0e1b\u0e49\u0e32\u0e0a\u0e31\u0e14",c:"public record"}}},
+ TSM:{own:"YES",d:{
+  ceo:{s:9,t:"C.C. Wei \u2014 Chairman+CEO, \u0e2d\u0e22\u0e39\u0e48 TSMC \u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48 1998, \u0e04\u0e38\u0e21 foundry ~70% \u0e42\u0e25\u0e01",c:"CEOToday Oct-2025"},
+  cfo:{s:9,t:"Wendell Huang \u2014 CFO \u0e2d\u0e32\u0e22\u0e38\u0e07\u0e32\u0e19\u0e22\u0e32\u0e27, \u0e01\u0e23\u0e2d\u0e1a margin floor 56%+ \u0e0a\u0e31\u0e14",c:"SEC 6-K/247WallSt 2025\u201326"},
+  guide:{s:9,t:"\u0e19\u0e33\u0e40\u0e1b\u0e49\u0e32 ~25% CAGR (USD) \u0e16\u0e36\u0e07 2029, \u0e40\u0e02\u0e49\u0e32\u0e40\u0e1b\u0e49\u0e32\u0e2a\u0e21\u0e48\u0e33\u0e40\u0e2a\u0e21\u0e2d; Q1'26 +38%",c:"247WallSt Feb-2026"},
+  transp:{s:9,t:"board resolution \u0e23\u0e32\u0e22\u0e44\u0e15\u0e23\u0e21\u0e32\u0e2a\u0e25\u0e30\u0e40\u0e2d\u0e35\u0e22\u0e14, \u0e40\u0e1b\u0e49\u0e32+margin floor \u0e40\u0e1b\u0e34\u0e14\u0e0a\u0e31\u0e14",c:"SEC 6-K 2025"},
+  capalloc:{s:8,t:"capex \u0e27\u0e34\u0e19\u0e31\u0e22 $52-56B (2026) + \u0e1b\u0e31\u0e19\u0e1c\u0e25\u0e42\u0e15 28%; ROIC \u0e2a\u0e39\u0e07",c:"247WallSt Feb-2026"},
+  ma:{s:"N/A",t:"\u0e42\u0e15\u0e41\u0e1a\u0e1a organic; \u0e44\u0e21\u0e48\u0e21\u0e35 M&A \u0e2a\u0e33\u0e04\u0e31\u0e0d\u0e43\u0e2b\u0e49\u0e1b\u0e23\u0e30\u0e40\u0e21\u0e34\u0e19",c:"N/A"},
+  buyback:{s:"N/A",t:"\u0e04\u0e37\u0e19\u0e17\u0e38\u0e19\u0e1c\u0e48\u0e32\u0e19\u0e1b\u0e31\u0e19\u0e1c\u0e25\u0e40\u0e1b\u0e47\u0e19\u0e2b\u0e25\u0e31\u0e01 \u0e44\u0e21\u0e48\u0e17\u0e33 buyback \u0e21\u0e32\u0e01",c:"N/A"},
+  dilution:{s:8,t:"RSU \u0e08\u0e33\u0e01\u0e31\u0e14, share count \u0e19\u0e34\u0e48\u0e07",c:"financials"},
+  insider:{s:"N/A",t:"\u0e01\u0e32\u0e23\u0e40\u0e1b\u0e34\u0e14\u0e40\u0e1c\u0e22 insider \u0e41\u0e1a\u0e1a\u0e44\u0e15\u0e49\u0e2b\u0e27\u0e31\u0e19\u0e15\u0e48\u0e32\u0e07\u0e08\u0e32\u0e01 US \u2014 \u0e44\u0e21\u0e48\u0e21\u0e35\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e40\u0e17\u0e35\u0e22\u0e1a\u0e40\u0e17\u0e48\u0e32",c:"N/A"},
+  comp:{s:7,t:"Wei ~$354.9M \u0e1b\u0e35 2025 (\u0e2a\u0e16\u0e34\u0e15\u0e34\u0e44\u0e15\u0e49\u0e2b\u0e27\u0e31\u0e19) \u0e41\u0e15\u0e48\u0e41\u0e04\u0e48 0.14% \u0e02\u0e2d\u0e07\u0e01\u0e33\u0e44\u0e23\u0e2a\u0e38\u0e17\u0e18\u0e34, \u0e15\u0e48\u0e33\u0e01\u0e27\u0e48\u0e32 peer US",c:"BigGo Apr-2026"},
+  board:{s:"N/A",t:"governance \u0e44\u0e15\u0e49\u0e2b\u0e27\u0e31\u0e19\u0e21\u0e37\u0e2d\u0e2d\u0e32\u0e0a\u0e35\u0e1e; \u0e44\u0e21\u0e48\u0e44\u0e14\u0e49\u0e1b\u0e23\u0e30\u0e40\u0e21\u0e34\u0e19\u0e2d\u0e34\u0e2a\u0e23\u0e30\u0e40\u0e15\u0e47\u0e21",c:"N/A"},
+  comms:{s:8,t:"Wei/Huang \u0e2a\u0e37\u0e48\u0e2d\u0e2a\u0e32\u0e23\u0e0a\u0e31\u0e14\u0e1a\u0e19 call, IR \u0e25\u0e30\u0e40\u0e2d\u0e35\u0e22\u0e14",c:"earnings transcript Q4'25"}}},
+ MU:{own:"PARTIAL",d:{
+  ceo:{s:8,t:"Sanjay Mehrotra \u2014 co-founder SanDisk, CEO \u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48 2017, \u0e19\u0e33\u0e1c\u0e48\u0e32\u0e19\u0e27\u0e31\u0e0f\u0e08\u0e31\u0e01\u0e23\u0e40\u0e01\u0e48\u0e07",c:"SimplyWallSt 2026"},
+  cfo:{s:7,t:"Mark Murphy \u2014 CFO solid ($11.1M comp 2025)",c:"Bullfincher 2025"},
+  guide:{s:7,t:"\u0e04\u0e38\u0e13\u0e20\u0e32\u0e1e guidance \u0e14\u0e35 \u0e41\u0e15\u0e48 memory = commodity cycle \u2014 \u0e2a\u0e27\u0e34\u0e07\u0e15\u0e32\u0e21\u0e23\u0e2d\u0e1a",c:"SimplyWallSt 2026"},
+  transp:{s:7,t:"\u0e40\u0e1b\u0e34\u0e14\u0e40\u0e1c\u0e22\u0e21\u0e32\u0e15\u0e23\u0e10\u0e32\u0e19 semis",c:"SEC DEF14A 2025"},
+  capalloc:{s:7,t:"buyback + \u0e1b\u0e31\u0e19\u0e1c\u0e25\u0e15\u0e32\u0e21\u0e27\u0e31\u0e0f\u0e08\u0e31\u0e01\u0e23 \u0e41\u0e15\u0e48\u0e2d\u0e14\u0e35\u0e15\u0e0b\u0e37\u0e49\u0e2d\u0e04\u0e37\u0e19\u0e0a\u0e48\u0e27\u0e07\u0e23\u0e32\u0e04\u0e32\u0e1e\u0e35\u0e04 (pro-cyclical)",c:"SEC DEF14A FY2019"},
+  ma:{s:"N/A",t:"M&A \u0e19\u0e49\u0e2d\u0e22\u0e21\u0e32\u0e01; \u0e42\u0e15 organic \u0e40\u0e1b\u0e47\u0e19\u0e2b\u0e25\u0e31\u0e01",c:"N/A"},
+  buyback:{s:6,t:"buyback active \u0e41\u0e15\u0e48 pro-cyclical (\u0e0b\u0e37\u0e49\u0e2d\u0e15\u0e2d\u0e19 high)",c:"SEC DEF14A"},
+  dilution:{s:6,t:"equity comp \u0e1e\u0e2d\u0e04\u0e27\u0e23, \u0e08\u0e31\u0e14\u0e01\u0e32\u0e23 share count \u0e14\u0e49\u0e27\u0e22 buyback",c:"financials"},
+  insider:{s:5,t:"Mehrotra \u0e16\u0e37\u0e2d 0.095%; \u0e02\u0e32\u0e22\u0e2b\u0e19\u0e31\u0e01 10b5-1 (85 sales); insider 0 \u0e0b\u0e37\u0e49\u0e2d",c:"Quiver/SimplyWallSt Nov-2025"},
+  comp:{s:7,t:"$30.9M \u0e1b\u0e35 2025; say-on-pay \u0e2b\u0e19\u0e38\u0e19 89%",c:"Quiver/SEC 2025"},
+  board:{s:7,t:"8 director \u0e21\u0e35\u0e1b\u0e23\u0e30\u0e2a\u0e1a\u0e01\u0e32\u0e23\u0e13\u0e4c + Lead Independent Director (Dugle); \u0e41\u0e15\u0e48 Chair+CEO \u0e23\u0e27\u0e21\u0e01\u0e31\u0e19 = flag \u0e40\u0e1a\u0e32\u0e46",c:"SEC 8-K/proxy 2025"},
+  comms:{s:7,t:"Mehrotra \u0e2d\u0e18\u0e34\u0e1a\u0e32\u0e22 dynamics \u0e27\u0e31\u0e0f\u0e08\u0e31\u0e01\u0e23\u0e0a\u0e31\u0e14",c:"public record"}}},
+ LLY:{own:"YES",d:{
+  ceo:{s:9,t:"David Ricks \u2014 Chair+CEO \u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48 2017, market cap \u0e42\u0e15 ~900%, \u0e19\u0e33 GLP-1",c:"AInvest/OncoDaily 2025\u201326"},
+  cfo:{s:8,t:"Lucas Montarce \u2014 promote \u0e20\u0e32\u0e22\u0e43\u0e19 (\u0e2d\u0e22\u0e39\u0e48 Lilly 10+ \u0e1b\u0e35), Ricks \u0e22\u0e01 integrity; \u0e43\u0e2b\u0e21\u0e48\u0e41\u0e15\u0e48\u0e40\u0e01\u0e4b\u0e32",c:"Lilly IR"},
+  guide:{s:8,t:"execution \u0e2a\u0e21\u0e48\u0e33\u0e40\u0e2a\u0e21\u0e2d, TSR \u0e0a\u0e19\u0e30 S&P \u0e15\u0e48\u0e2d\u0e40\u0e19\u0e37\u0e48\u0e2d\u0e07",c:"SEC DEF14A 2025"},
+  transp:{s:8,t:"\u0e40\u0e2b\u0e15\u0e38\u0e1c\u0e25 comp + pay-vs-performance \u0e0a\u0e31\u0e14",c:"SEC DEF14A 2025"},
+  capalloc:{s:9,t:"R&D 24% \u0e02\u0e2d\u0e07\u0e23\u0e32\u0e22\u0e44\u0e14\u0e49 + \u0e02\u0e22\u0e32\u0e22\u0e42\u0e23\u0e07\u0e07\u0e32\u0e19 US $50B + \u0e1b\u0e31\u0e19\u0e1c\u0e25\u0e42\u0e15; \u0e27\u0e34\u0e19\u0e31\u0e22\u0e2a\u0e39\u0e07",c:"AInvest Jul-2025"},
+  ma:{s:7,t:"bolt-on M&A \u0e27\u0e34\u0e19\u0e31\u0e22 (Loxo/Dice/Point Bio) \u0e44\u0e21\u0e48 overpay \u0e41\u0e1a\u0e1a transformational",c:"public record"},
+  buyback:{s:6,t:"buyback \u0e1e\u0e2d\u0e1b\u0e23\u0e30\u0e21\u0e32\u0e13; \u0e40\u0e19\u0e49\u0e19 R&D + \u0e1b\u0e31\u0e19\u0e1c\u0e25 (\u0e40\u0e2b\u0e21\u0e32\u0e30\u0e2a\u0e21)",c:"financials"},
+  dilution:{s:7,t:"equity comp \u0e1e\u0e2d\u0e04\u0e27\u0e23\u0e40\u0e17\u0e35\u0e22\u0e1a\u0e02\u0e19\u0e32\u0e14",c:"financials"},
+  insider:{s:"N/A",t:"professional mgmt \u0e44\u0e21\u0e48\u0e43\u0e0a\u0e48 founder; \u0e44\u0e21\u0e48\u0e21\u0e35 % \u0e16\u0e37\u0e2d\u0e0a\u0e31\u0e14\u0e1e\u0e2d\u0e43\u0e2b\u0e49\u0e04\u0e30\u0e41\u0e19\u0e19",c:"N/A"},
+  comp:{s:6,t:"$36.7M \u0e1b\u0e35 2025 (\u0e19\u0e48\u0e32\u0e08\u0e30\u0e2a\u0e39\u0e07\u0e2a\u0e38\u0e14 Big Pharma) \u0e41\u0e15\u0e48 say-on-pay 94% 5 \u0e1b\u0e35\u0e15\u0e34\u0e14, performance-tied",c:"FiercePharma Mar-2026"},
+  board:{s:8,t:"\u0e01\u0e33\u0e25\u0e31\u0e07\u0e40\u0e25\u0e34\u0e01 classified board + \u0e40\u0e25\u0e34\u0e01 supermajority voting = governance \u0e14\u0e35\u0e02\u0e36\u0e49\u0e19",c:"SEC DEF14A 2025"},
+  comms:{s:7,t:"\u0e2a\u0e37\u0e48\u0e2d\u0e2a\u0e32\u0e23\u0e01\u0e25\u0e22\u0e38\u0e17\u0e18\u0e4c\u0e0a\u0e31\u0e14",c:"public record"}}},
+ HOOD:{own:"PARTIAL",d:{
+  ceo:{s:6,t:"Vlad Tenev \u2014 co-founder, \u0e41\u0e15\u0e48\u0e1b\u0e23\u0e30\u0e27\u0e31\u0e15\u0e34 2021 (outage/PFOF/GME) + \u0e41\u0e1a\u0e48\u0e07\u0e43\u0e08\u0e44\u0e1b Harmonic AI",c:"LinkedIn/FinancialContent 2026"},
+  cfo:{s:6,t:"Jason Warnick (ex-Amazon) credible \u0e41\u0e15\u0e48\u0e25\u0e07\u0e15\u0e33\u0e41\u0e2b\u0e19\u0e48\u0e07 Q1 2026; Shiv Verma (\u0e20\u0e32\u0e22\u0e43\u0e19) \u0e41\u0e17\u0e19",c:"CFODive Nov-2025"},
+  guide:{s:"N/A",t:"\u0e1b\u0e23\u0e30\u0e27\u0e31\u0e15\u0e34\u0e2a\u0e31\u0e49\u0e19 + \u0e23\u0e32\u0e22\u0e44\u0e14\u0e49\u0e2a\u0e27\u0e34\u0e07\u0e15\u0e32\u0e21 crypto \u2014 \u0e1b\u0e23\u0e30\u0e40\u0e21\u0e34\u0e19 accuracy \u0e15\u0e23\u0e07\u0e46 \u0e44\u0e21\u0e48\u0e44\u0e14\u0e49",c:"N/A"},
+  transp:{s:6,t:"\u0e14\u0e35\u0e02\u0e36\u0e49\u0e19\u0e21\u0e32\u0e01\u0e2b\u0e25\u0e31\u0e07 2021 \u0e41\u0e15\u0e48 PFOF/gamification \u0e22\u0e31\u0e07\u0e16\u0e39\u0e01\u0e27\u0e34\u0e08\u0e32\u0e23\u0e13\u0e4c\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07\u0e04\u0e27\u0e32\u0e21\u0e42\u0e1b\u0e23\u0e48\u0e07\u0e43\u0e2a",c:"FinancialContent Feb-2026"},
+  capalloc:{s:6,t:"\u0e40\u0e1e\u0e34\u0e48\u0e07 initiate buyback + \u0e0b\u0e37\u0e49\u0e2d Bitstamp/TradePMR/WonderFi; integration \u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e1e\u0e34\u0e2a\u0e39\u0e08\u0e19\u0e4c",c:"public record"},
+  ma:{s:6,t:"acquisitive \u0e40\u0e02\u0e49\u0e32 crypto/advisory (Bitstamp/WonderFi/Pluto); \u0e1c\u0e25 integration \u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e0a\u0e31\u0e14",c:"public record"},
+  buyback:{s:"N/A",t:"\u0e40\u0e1e\u0e34\u0e48\u0e07\u0e40\u0e23\u0e34\u0e48\u0e21 buyback \u0e1b\u0e23\u0e30\u0e27\u0e31\u0e15\u0e34\u0e22\u0e31\u0e07\u0e2a\u0e31\u0e49\u0e19",c:"N/A"},
+  dilution:{s:5,t:"SBC \u0e2a\u0e39\u0e07\u0e43\u0e19\u0e2d\u0e14\u0e35\u0e15 + \u0e2b\u0e38\u0e49\u0e19 founder",c:"financials"},
+  insider:{s:6,t:"founder \u0e16\u0e37\u0e2d Class B super-voting = \u0e04\u0e38\u0e21\u0e40\u0e2a\u0e35\u0e22\u0e07/ownership \u0e2a\u0e39\u0e07 \u0e41\u0e15\u0e48 cash-out $95M \u0e15\u0e2d\u0e19 IPO",c:"LinkedIn (IPO proxy)"},
+  comp:{s:5,t:"Tenev \u0e40\u0e04\u0e22\u0e44\u0e14\u0e49 equity grant \u0e01\u0e49\u0e2d\u0e19\u0e43\u0e2b\u0e0d\u0e48 ~2021; founders \u0e02\u0e32\u0e22 $95M \u0e15\u0e2d\u0e19 IPO",c:"public record"},
+  board:{s:"N/A",t:"dual-class \u0e08\u0e33\u0e01\u0e31\u0e14 independence \u0e02\u0e2d\u0e07\u0e1a\u0e2d\u0e23\u0e4c\u0e14; \u0e21\u0e35 director \u0e20\u0e32\u0e22\u0e19\u0e2d\u0e01\u0e1a\u0e49\u0e32\u0e07 \u2014 \u0e44\u0e21\u0e48\u0e1b\u0e23\u0e30\u0e40\u0e21\u0e34\u0e19\u0e40\u0e15\u0e47\u0e21",c:"N/A"},
+  comms:{s:6,t:"Tenev \u0e2a\u0e37\u0e48\u0e2d\u0e2a\u0e32\u0e23\u0e40\u0e01\u0e48\u0e07/\u0e21\u0e35\u0e2a\u0e37\u0e48\u0e2d, IR \u0e14\u0e35\u0e02\u0e36\u0e49\u0e19",c:"public record"}}}
+};
+/* ===== B-tier batch 1: GOOGL ASML MRVL STX (web-cited) ===== */
+Object.assign(LEADERSHIP2,{
+ GOOGL:{own:"PARTIAL",d:{
+  ceo:{s:9,t:"Sundar Pichai \u2014 CEO Google 2015/Alphabet 2019, \u0e1e\u0e32\u0e1a\u0e23\u0e34\u0e29\u0e31\u0e17\u0e17\u0e30\u0e25\u0e38 $2T+, \u0e1e\u0e25\u0e34\u0e01 AI/cloud",c:"BusinessChief/SEC Mar-2026"},
+  cfo:{s:8,t:"Anat Ashkenazi \u2014 CFO (\u0e21\u0e32\u0e08\u0e32\u0e01 Eli Lilly), \u0e2a\u0e37\u0e1a\u0e15\u0e48\u0e2d Ruth Porat\u2192President; credible",c:"Capital.com/SEC 2025"},
+  guide:{s:"N/A",t:"Alphabet \u0e44\u0e21\u0e48\u0e43\u0e2b\u0e49 formal financial guidance \u2014 \u0e1b\u0e23\u0e30\u0e40\u0e21\u0e34\u0e19 accuracy \u0e15\u0e23\u0e07\u0e46 \u0e44\u0e21\u0e48\u0e44\u0e14\u0e49",c:"N/A"},
+  transp:{s:7,t:"segment reporting \u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48 2015, 10-K \u0e25\u0e30\u0e40\u0e2d\u0e35\u0e22\u0e14; \u0e41\u0e15\u0e48 Other Bets \u0e22\u0e31\u0e07\u0e1b\u0e34\u0e14",c:"SEC ARS 2025"},
+  capalloc:{s:8,t:"FCF \u0e21\u0e2b\u0e32\u0e28\u0e32\u0e25 + buyback $62B (2023) + \u0e40\u0e23\u0e34\u0e48\u0e21\u0e1b\u0e31\u0e19\u0e1c\u0e25 2024; Other Bets \u0e22\u0e31\u0e07\u0e40\u0e1c\u0e32\u0e40\u0e07\u0e34\u0e19",c:"SEC ARS 2025"},
+  ma:{s:6,t:"Wiz $32B (\u0e14\u0e35\u0e25\u0e43\u0e2b\u0e0d\u0e48\u0e2a\u0e38\u0e14) \u2014 integration/regulatory risk; \u0e2d\u0e14\u0e35\u0e15\u0e40\u0e19\u0e49\u0e19 tuck-in",c:"SEC 8-K 2025"},
+  buyback:{s:8,t:"\u0e0b\u0e37\u0e49\u0e2d\u0e04\u0e37\u0e19 $62B \u0e1b\u0e35 2023, \u0e15\u0e48\u0e2d\u0e40\u0e19\u0e37\u0e48\u0e2d\u0e07",c:"SEC ARS 2025"},
+  dilution:{s:6,t:"SBC ~$23B/\u0e1b\u0e35 \u0e2a\u0e39\u0e07, buyback \u0e2b\u0e31\u0e01\u0e25\u0e49\u0e32\u0e07",c:"SEC ARS 2025"},
+  insider:{s:5,t:"Pichai \u0e16\u0e37\u0e2d\u0e21\u0e32\u0e01\u0e2a\u0e38\u0e14\u0e19\u0e2d\u0e01 founders \u0e41\u0e15\u0e48 Page+Brin \u0e04\u0e38\u0e21 voting 51.4% (dual-class)",c:"Capital.com Nov-2025"},
+  comp:{s:6,t:"Pichai \u0e41\u0e1e\u0e47\u0e01\u0e40\u0e01\u0e08 3 \u0e1b\u0e35\u0e16\u0e36\u0e07 $692M \u0e41\u0e15\u0e48\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19 $2M, \u0e1c\u0e39\u0e01 TSR+Waymo/Wing",c:"Entrepreneur Mar-2026"},
+  board:{s:5,t:"founder-controlled (dual-class) \u0e08\u0e33\u0e01\u0e31\u0e14 independence/accountability \u0e02\u0e2d\u0e07\u0e1a\u0e2d\u0e23\u0e4c\u0e14",c:"Capital.com Nov-2025"},
+  comms:{s:7,t:"Pichai \u0e2a\u0e37\u0e48\u0e2d\u0e2a\u0e32\u0e23\u0e19\u0e34\u0e48\u0e07/\u0e0a\u0e31\u0e14, IR \u0e14\u0e35",c:"public record"}}},
+ ASML:{own:"YES",d:{
+  ceo:{s:8,t:"Christophe Fouquet \u2014 CEO \u0e40\u0e21.\u0e22. 2024 (15 \u0e1b\u0e35\u0e43\u0e19 ASML), pragmatic execution, \u0e2a\u0e37\u0e1a\u0e17\u0e2d\u0e14\u0e08\u0e32\u0e01 Wennink \u0e23\u0e32\u0e1a\u0e23\u0e37\u0e48\u0e19",c:"FinancialContent/SimplyWallSt 2026"},
+  cfo:{s:9,t:"Roger Dassen \u2014 CFO \u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48 2018 (\u0e16\u0e36\u0e07 2030), ex-Deloitte global, \u0e0a\u0e37\u0e48\u0e2d\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07 transparency",c:"ASML board/SimplyWallSt"},
+  guide:{s:7,t:"outlook \u0e0a\u0e31\u0e14 (EUV up, China ~20% \u0e02\u0e2d\u0e07 backlog) \u0e41\u0e15\u0e48 bookings \u0e1c\u0e31\u0e19\u0e1c\u0e27\u0e19\u0e15\u0e32\u0e21\u0e23\u0e2d\u0e1a semi",c:"ASML transcript Q4'25"},
+  transp:{s:9,t:"\u0e0a\u0e37\u0e48\u0e2d\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07 transparency, video interview \u0e17\u0e38\u0e01\u0e44\u0e15\u0e23\u0e21\u0e32\u0e2a, \u0e1c\u0e25\u0e25\u0e30\u0e40\u0e2d\u0e35\u0e22\u0e14",c:"FinancialContent Apr-2026"},
+  capalloc:{s:8,t:"\u0e1b\u0e31\u0e19\u0e1c\u0e25 \u20ac7.50 (+17%) + buyback \u20ac7.6B + program \u0e43\u0e2b\u0e21\u0e48 3 \u0e1b\u0e35; \u0e27\u0e34\u0e19\u0e31\u0e22",c:"ASML transcript Q4'25"},
+  ma:{s:7,t:"\u0e42\u0e15 organic; Mistral AI \u20ac1.3B (~11% minority) = strategic \u0e44\u0e21\u0e48\u0e43\u0e0a\u0e48 empire-building",c:"LinkedIn 2026"},
+  buyback:{s:8,t:"buyback \u20ac7.6B \u0e17\u0e33\u0e41\u0e25\u0e49\u0e27 + program \u0e43\u0e2b\u0e21\u0e48 3 \u0e1b\u0e35",c:"ASML transcript Q4'25"},
+  dilution:{s:8,t:"dilution \u0e15\u0e48\u0e33, \u0e40\u0e19\u0e49\u0e19 buyback",c:"financials"},
+  insider:{s:"N/A",t:"Fouquet \u0e16\u0e37\u0e2d 0.008% (professional mgmt); \u0e01\u0e32\u0e23\u0e40\u0e1b\u0e34\u0e14\u0e40\u0e1c\u0e22 insider \u0e41\u0e1a\u0e1a Dutch \u0e15\u0e48\u0e32\u0e07",c:"N/A"},
+  comp:{s:8,t:"\u20ac5.43M \u2014 \u0e15\u0e48\u0e33\u0e01\u0e27\u0e48\u0e32 peer US (\u0e02\u0e19\u0e32\u0e14\u0e40\u0e14\u0e35\u0e22\u0e27\u0e01\u0e31\u0e19), performance-tied",c:"SimplyWallSt 2026"},
+  board:{s:8,t:"Dutch supervisory board, \u0e44\u0e21\u0e48\u0e21\u0e35 dual-class, remuneration policy \u0e21\u0e37\u0e2d\u0e2d\u0e32\u0e0a\u0e35\u0e1e",c:"ASML governance"},
+  comms:{s:8,t:"video interview \u0e23\u0e32\u0e22\u0e44\u0e15\u0e23\u0e21\u0e32\u0e2a, IR \u0e0a\u0e31\u0e14",c:"ASML 2026"}}},
+ MRVL:{own:"PARTIAL",d:{
+  ceo:{s:7,t:"Matt Murphy \u2014 Chair+CEO \u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48 2016, custom-silicon \u0e0a\u0e19\u0e30 4 hyperscalers/AWS/Nvidia $2B; \u0e41\u0e15\u0e48 combined chair",c:"fintool/SEC 2025-26"},
+  cfo:{s:6,t:"Willem Meintjes (CFO 2023-26) \u0e40\u0e1e\u0e34\u0e48\u0e07\u0e25\u0e32\u0e2d\u0e2d\u0e01 15 \u0e21\u0e34.\u0e22. 2026 \u2192 Dan Durn (ex-Adobe) = transition",c:"Marvell IR Jun-2026"},
+  guide:{s:7,t:"Q1 FY26 guide +60% YoY, narrow range; \u0e41\u0e15\u0e48\u0e40\u0e25\u0e37\u0e48\u0e2d\u0e19 Investor Day \u0e2d\u0e2d\u0e01\u0e44\u0e1b (macro)",c:"SEC 8-K 2025"},
+  transp:{s:6,t:"\u0e40\u0e25\u0e37\u0e48\u0e2d\u0e19 Investor Day; \u0e19\u0e2d\u0e01\u0e19\u0e31\u0e49\u0e19\u0e21\u0e32\u0e15\u0e23\u0e10\u0e32\u0e19",c:"SEC 8-K May-2025"},
+  capalloc:{s:6,t:"buyback + acquisitive (Celestial AI $6B); M&A \u0e2b\u0e19\u0e31\u0e01",c:"SimplyWallSt 2025"},
+  ma:{s:6,t:"serial acquirer (Inphi $10B/Cavium/Celestial $6B); Inphi \u0e41\u0e1e\u0e07, integration \u0e1c\u0e2a\u0e21",c:"SimplyWallSt 2025"},
+  buyback:{s:6,t:"buyback active \u0e41\u0e15\u0e48 dilution \u0e08\u0e32\u0e01 M&A/SBC",c:"financials"},
+  dilution:{s:5,t:"SBC \u0e2a\u0e39\u0e07 + \u0e2b\u0e38\u0e49\u0e19\u0e08\u0e48\u0e32\u0e22 M&A",c:"SimplyWallSt 2025"},
+  insider:{s:5,t:"insider net-sellers; outgoing CFO filing \u0e02\u0e32\u0e22 $65M; combined chair",c:"Stocktwits Jun-2026"},
+  comp:{s:4,t:"say-on-pay \u0e41\u0e04\u0e48 52% \u0e1b\u0e35 2024 = \u0e1c\u0e39\u0e49\u0e16\u0e37\u0e2d\u0e04\u0e49\u0e32\u0e19\u0e21\u0e32\u0e01; CIC \u0e43\u0e2b\u0e0d\u0e48 $184M",c:"fintool Nov-2025"},
+  board:{s:6,t:"Lead Independent Director + attendance ~98%, \u0e41\u0e15\u0e48 combined Chair/CEO + say-on-pay \u0e15\u0e48\u0e33",c:"fintool Nov-2025"},
+  comms:{s:6,t:"\u0e40\u0e25\u0e37\u0e48\u0e2d\u0e19 Investor Day \u0e2a\u0e2d\u0e07\u0e23\u0e2d\u0e1a; \u0e19\u0e2d\u0e01\u0e19\u0e31\u0e49\u0e19\u0e42\u0e2d\u0e40\u0e04",c:"SEC 8-K 2025"}}},
+ STX:{own:"PARTIAL",d:{
+  ceo:{s:8,t:"Dave Mosley \u2014 \u0e1c\u0e39\u0e49\u0e19\u0e33 turnaround HAMR (FY25 rev $9.1B +39%, GM \u0e2a\u0e16\u0e34\u0e15\u0e34 9 \u0e44\u0e15\u0e23\u0e21\u0e32\u0e2a\u0e15\u0e34\u0e14); \u0e01\u0e33\u0e25\u0e31\u0e07\u0e02\u0e36\u0e49\u0e19\u0e40\u0e1b\u0e47\u0e19 combined chair",c:"BlocksAndFiles/AInvest 2025"},
+  cfo:{s:7,t:"Gianluca Romano \u2014 CFO \u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48 2018, BTO discipline + \u0e25\u0e14\u0e2b\u0e19\u0e35\u0e49",c:"Seagate IR/AInvest 2025"},
+  guide:{s:8,t:"HAMR roadmap \u0e15\u0e32\u0e21\u0e41\u0e1c\u0e19, guide in-line, supply discipline (BTO)",c:"AInvest Sep-2025"},
+  transp:{s:7,t:"roadmap \u0e0a\u0e31\u0e14, \u0e40\u0e1b\u0e34\u0e14 qualification milestones",c:"Yahoo Q2 Jan-2026"},
+  capalloc:{s:8,t:"\u0e25\u0e14 gross debt \u0e40\u0e2b\u0e25\u0e37\u0e2d $5B \u0e01\u0e48\u0e2d\u0e19\u0e01\u0e33\u0e2b\u0e19\u0e14 + \u0e23\u0e35\u0e2a\u0e31\u0e21 buyback \u0e01.\u0e22. 2025 + \u0e1b\u0e31\u0e19\u0e1c\u0e25; \u0e27\u0e34\u0e19\u0e31\u0e22",c:"AInvest Jul-2025"},
+  ma:{s:"N/A",t:"M&A \u0e19\u0e49\u0e2d\u0e22\u0e21\u0e32\u0e01; \u0e42\u0e15 organic (HAMR)",c:"N/A"},
+  buyback:{s:7,t:"\u0e23\u0e35\u0e2a\u0e31\u0e21 buyback \u0e01.\u0e22. 2025 \u0e2b\u0e25\u0e31\u0e07\u0e25\u0e14\u0e2b\u0e19\u0e35\u0e49 (\u0e25\u0e33\u0e14\u0e31\u0e1a\u0e40\u0e2b\u0e21\u0e32\u0e30)",c:"AInvest 2025"},
+  dilution:{s:6,t:"SBC \u0e1e\u0e2d\u0e1b\u0e23\u0e30\u0e21\u0e32\u0e13; share count \u0e08\u0e31\u0e14\u0e01\u0e32\u0e23\u0e44\u0e14\u0e49",c:"financials"},
+  insider:{s:5,t:"insider \u0e02\u0e32\u0e22\u0e2a\u0e38\u0e17\u0e18\u0e34 ~$98-158M/12 \u0e40\u0e14\u0e37\u0e2d\u0e19 (Romano/Morris/Mosley \u0e02\u0e32\u0e22)",c:"SimplyWallSt 2026"},
+  comp:{s:"N/A",t:"\u0e44\u0e21\u0e48\u0e44\u0e14\u0e49\u0e15\u0e31\u0e27\u0e40\u0e25\u0e02 comp \u0e17\u0e35\u0e48 verify \u0e44\u0e14\u0e49",c:"N/A"},
+  board:{s:6,t:"Mosley \u0e02\u0e36\u0e49\u0e19\u0e40\u0e1b\u0e47\u0e19\u0e1b\u0e23\u0e30\u0e18\u0e32\u0e19 = combined Chair/CEO (flag \u0e40\u0e1a\u0e32\u0e46)",c:"BlocksAndFiles 2025"},
+  comms:{s:7,t:"Mosley/Romano \u0e0a\u0e31\u0e14\u0e1a\u0e19 call, update HAMR \u0e25\u0e30\u0e40\u0e2d\u0e35\u0e22\u0e14",c:"Yahoo Q2 2026"}}}
+});
+
+/* ===== B-tier batch 2: ALAB IBKR ARM ANET (web-cited) ===== */
+Object.assign(LEADERSHIP2,{
+ ALAB:{own:"PARTIAL",d:{
+  ceo:{s:8,t:"Jitendra Mohan \u2014 co-founder CEO \u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48 2017 (ex-TI/National Semi), rev +92% YoY, custom AI connectivity \u0e0a\u0e19\u0e30",c:"StockTitan proxy/CNBC 2026"},
+  cfo:{s:6,t:"Mike Tate \u0e25\u0e07\u0e08\u0e32\u0e01\u0e15\u0e33\u0e41\u0e2b\u0e19\u0e48\u0e07 (\u0e2b\u0e38\u0e49\u0e19\u0e23\u0e48\u0e27\u0e07 10% \u0e27\u0e31\u0e19\u0e1b\u0e23\u0e30\u0e01\u0e32\u0e28) \u2192 Desmond Lynch (ex-Rambus); transition",c:"CNBC/Astera IR Feb-2026"},
+  guide:{s:7,t:"Q4'25 beat (EPS 58c vs 51c) + guide Q1'26 \u0e41\u0e02\u0e47\u0e07 \u0e41\u0e15\u0e48 rev \u0e15\u0e48\u0e33\u0e01\u0e27\u0e48\u0e32 whisper \u2192 \u0e2b\u0e38\u0e49\u0e19\u0e23\u0e48\u0e27\u0e07 10%",c:"CNBC Feb-2026"},
+  transp:{s:7,t:"clawback policy (Rule 10D-1), IR \u0e0a\u0e31\u0e14, \u0e21\u0e32\u0e15\u0e23\u0e10\u0e32\u0e19",c:"fintool Nov-2025"},
+  capalloc:{s:"N/A",t:"\u0e40\u0e1e\u0e34\u0e48\u0e07 IPO 2024 \u2014 \u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35 buyback/\u0e1b\u0e31\u0e19\u0e1c\u0e25, reinvest \u0e42\u0e15; \u0e44\u0e21\u0e48\u0e21\u0e35 track record \u0e43\u0e2b\u0e49\u0e1b\u0e23\u0e30\u0e40\u0e21\u0e34\u0e19",c:"N/A"},
+  ma:{s:"N/A",t:"\u0e44\u0e21\u0e48\u0e21\u0e35 M&A \u0e2a\u0e33\u0e04\u0e31\u0e0d",c:"N/A"},
+  buyback:{s:"N/A",t:"\u0e44\u0e21\u0e48\u0e21\u0e35 buyback (growth co)",c:"N/A"},
+  dilution:{s:5,t:"SBC \u0e2a\u0e39\u0e07\u0e2b\u0e25\u0e31\u0e07 IPO; diluted share \u0e02\u0e36\u0e49\u0e19 156k\u2192180k",c:"SEC 8-K Q3'25"},
+  insider:{s:6,t:"Mohan co-founder \u0e16\u0e37\u0e2d stake (aligned); \u0e41\u0e15\u0e48 post-IPO \u0e02\u0e32\u0e22\u0e15\u0e32\u0e21\u0e1b\u0e01\u0e15\u0e34 (\u0e44\u0e21\u0e48 quantify)",c:"StockTitan proxy 2026"},
+  comp:{s:5,t:"total ~$50.9M \u0e2a\u0e39\u0e07\u0e40\u0e17\u0e35\u0e22\u0e1a\u0e02\u0e19\u0e32\u0e14 (equity IPO \u0e40\u0e1b\u0e47\u0e19\u0e2b\u0e25\u0e31\u0e01); bonus payout 180.6% \u0e02\u0e2d\u0e07 target",c:"SimplyWallSt 2026"},
+  board:{s:8,t:"Independent non-exec Chair (Manuel Alba, 2018), \u0e41\u0e22\u0e01 Chair/CEO, independent \u0e02\u0e49\u0e32\u0e07\u0e21\u0e32\u0e01 + clawback \u2014 \u0e2a\u0e30\u0e2d\u0e32\u0e14\u0e2a\u0e33\u0e2b\u0e23\u0e31\u0e1a IPO",c:"fintool Nov-2025"},
+  comms:{s:7,t:"Mohan active \u0e2a\u0e37\u0e48\u0e2d (CNBC), \u0e0a\u0e31\u0e14",c:"CNBC Feb-2026"}}},
+ IBKR:{own:"YES",d:{
+  ceo:{s:8,t:"Milan Galik \u2014 CEO \u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48 2014 (11.6 \u0e1b\u0e35), software-driven growth, zero-commission 2025; Peterffy founder \u0e01\u0e33\u0e01\u0e31\u0e1a",c:"SimplyWallSt/SEC 2025"},
+  cfo:{s:8,t:"Paul Brody \u2014 CFO/Treasurer \u0e2d\u0e32\u0e22\u0e38\u0e07\u0e32\u0e19\u0e22\u0e32\u0e27, liquidity/controls \u0e23\u0e2d\u0e1a\u0e04\u0e2d\u0e1a, credit rating \u0e41\u0e02\u0e47\u0e07",c:"SEC DEF14A 2025"},
+  guide:{s:"N/A",t:"\u0e44\u0e21\u0e48\u0e43\u0e2b\u0e49 formal guidance \u0e15\u0e31\u0e27\u0e40\u0e25\u0e02; \u0e1b\u0e23\u0e30\u0e40\u0e21\u0e34\u0e19 performance \u0e40\u0e0a\u0e34\u0e07\u0e04\u0e38\u0e13\u0e20\u0e32\u0e1e \u2014 accuracy \u0e44\u0e21\u0e48\u0e44\u0e14\u0e49",c:"N/A"},
+  transp:{s:7,t:"proxy + pay-vs-performance \u0e0a\u0e31\u0e14 \u0e41\u0e15\u0e48\u0e1b\u0e23\u0e30\u0e40\u0e21\u0e34\u0e19 performance \u0e40\u0e0a\u0e34\u0e07\u0e04\u0e38\u0e13\u0e20\u0e32\u0e1e (\u0e44\u0e21\u0e48\u0e21\u0e35 metric \u0e0a\u0e31\u0e14)",c:"fintool Nov-2025"},
+  capalloc:{s:8,t:"\u0e1b\u0e31\u0e19\u0e1c\u0e25 payout \u0e41\u0e04\u0e48 14% (\u0e2d\u0e19\u0e38\u0e23\u0e31\u0e01\u0e29\u0e4c) + buyback \u0e25\u0e1a dilution; margin \u0e01\u0e48\u0e2d\u0e19\u0e20\u0e32\u0e29\u0e35 ~71%",c:"Pestel/SimplyWallSt 2025"},
+  ma:{s:"N/A",t:"\u0e42\u0e15 organic; \u0e44\u0e21\u0e48\u0e21\u0e35 M&A \u0e2a\u0e33\u0e04\u0e31\u0e0d",c:"N/A"},
+  buyback:{s:7,t:"repurchase authorization \u0e0a\u0e14\u0e40\u0e0a\u0e22 dilution \u0e08\u0e32\u0e01 incentive plan",c:"MatrixBCG 2026"},
+  dilution:{s:7,t:"RSU \u0e43\u0e2b\u0e49 NEO + buyback \u0e0a\u0e14\u0e40\u0e0a\u0e22; \u0e44\u0e21\u0e48\u0e21\u0e35 options \u0e43\u0e19\u0e2d\u0e14\u0e35\u0e15",c:"fintool Nov-2025"},
+  insider:{s:7,t:"Peterffy \u0e16\u0e37\u0e2d ~75% = aligned \u0e21\u0e32\u0e01 + \u0e2b\u0e49\u0e32\u0e21 hedge/pledge; \u0e41\u0e15\u0e48 insider \u0e2d\u0e37\u0e48\u0e19\u0e02\u0e32\u0e22\u0e2a\u0e38\u0e17\u0e18\u0e34 ~$124M/12 \u0e40\u0e14\u0e37\u0e2d\u0e19",c:"SimplyWallSt 2026"},
+  comp:{s:9,t:"Peterffy \u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19\u0e25\u0e49\u0e27\u0e19 capped \u0e17\u0e35\u0e48 0.2% \u0e02\u0e2d\u0e07\u0e01\u0e33\u0e44\u0e23\u0e2a\u0e38\u0e17\u0e18\u0e34 = shareholder-friendly \u0e21\u0e32\u0e01; \u0e44\u0e21\u0e48 benchmark; \u0e44\u0e21\u0e48\u0e21\u0e35 golden parachute",c:"SEC DEF14A 2025"},
+  board:{s:6,t:"dual-class Peterffy ~74% voting + Comp Committee \u0e21\u0e35 Peterffy \u0e40\u0e1b\u0e47\u0e19\u0e1b\u0e23\u0e30\u0e18\u0e32\u0e19 = \u0e01\u0e23\u0e30\u0e08\u0e38\u0e01; \u0e41\u0e15\u0e48\u0e2b\u0e49\u0e32\u0e21 hedge, \u0e44\u0e21\u0e48\u0e21\u0e35 severance",c:"MatrixBCG/fintool 2026"},
+  comms:{s:7,t:"Peterffy \u0e1e\u0e39\u0e14\u0e15\u0e23\u0e07/\u0e21\u0e35\u0e2a\u0e37\u0e48\u0e2d; IR \u0e0a\u0e31\u0e14",c:"public record"}}},
+ ARM:{own:"PARTIAL",d:{
+  ceo:{s:7,t:"Rene Haas \u2014 CEO \u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48 2022, \u0e1e\u0e25\u0e34\u0e01 ARM \u0e2a\u0e39\u0e48 AI/diversified, execution \u0e14\u0e35; \u0e41\u0e15\u0e48\u0e25\u0e48\u0e32\u0e2a\u0e38\u0e14\u0e44\u0e1b\u0e04\u0e38\u0e21 SoftBank Group Int'l \u0e14\u0e49\u0e27\u0e22 = \u0e41\u0e1a\u0e48\u0e07\u0e43\u0e08",c:"Bloomberg/SEC Apr-2026"},
+  cfo:{s:6,t:"Jason Child (ex-Splunk/Amazon) \u2014 credible \u0e41\u0e15\u0e48\u0e44\u0e21\u0e48\u0e21\u0e35\u0e15\u0e31\u0e27\u0e40\u0e25\u0e02 verify \u0e25\u0e48\u0e32\u0e2a\u0e38\u0e14",c:"public record"},
+  guide:{s:"N/A",t:"royalty/licensing model \u2014 \u0e44\u0e21\u0e48\u0e21\u0e35\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25 accuracy \u0e17\u0e35\u0e48 verify \u0e44\u0e14\u0e49",c:"N/A"},
+  transp:{s:6,t:"controlled-company disclosure + related-party policy; \u0e41\u0e15\u0e48\u0e1e\u0e31\u0e27\u0e01\u0e31\u0e1a SoftBank \u0e25\u0e14\u0e04\u0e27\u0e32\u0e21\u0e0a\u0e31\u0e14",c:"SEC 6-K annual report 2025"},
+  capalloc:{s:"N/A",t:"\u0e44\u0e21\u0e48\u0e21\u0e35\u0e1b\u0e31\u0e19\u0e1c\u0e25/buyback; reinvest R&D (growth) \u2014 \u0e44\u0e21\u0e48\u0e21\u0e35 track record",c:"N/A"},
+  ma:{s:"N/A",t:"parent SoftBank \u0e17\u0e33 M&A (Ampere/Graphcore); ARM organic",c:"N/A"},
+  buyback:{s:"N/A",t:"\u0e44\u0e21\u0e48\u0e21\u0e35 buyback",c:"N/A"},
+  dilution:{s:5,t:"post-IPO SBC; free float \u0e19\u0e49\u0e2d\u0e22 (~10%) \u0e02\u0e22\u0e32\u0e22\u0e1c\u0e25",c:"financials"},
+  insider:{s:5,t:"SoftBank ~87-90% control = \u0e01\u0e23\u0e30\u0e08\u0e38\u0e01; minority float \u0e19\u0e49\u0e2d\u0e22\u0e21\u0e32\u0e01",c:"SEC 6-K annual report 2025"},
+  comp:{s:"N/A",t:"\u0e44\u0e21\u0e48\u0e44\u0e14\u0e49\u0e15\u0e31\u0e27\u0e40\u0e25\u0e02 comp Haas \u0e17\u0e35\u0e48 verify",c:"N/A"},
+  board:{s:4,t:"SoftBank controlled-company, \u0e41\u0e15\u0e48\u0e07\u0e15\u0e31\u0e49\u0e07 director, Son \u0e40\u0e1b\u0e47\u0e19 chairman; minority protection \u0e2d\u0e48\u0e2d\u0e19",c:"SEC 6-K annual report 2025"},
+  comms:{s:6,t:"Haas active/articulate; IR \u0e1e\u0e2d\u0e43\u0e0a\u0e49",c:"public record"}}},
+ ANET:{own:"PARTIAL",d:{
+  ceo:{s:9,t:"Jayshree Ullal \u2014 \u0e1c\u0e39\u0e49\u0e19\u0e33\u0e23\u0e30\u0e14\u0e31\u0e1a\u0e15\u0e33\u0e19\u0e32\u0e19, \u0e2a\u0e23\u0e49\u0e32\u0e07 Arista \u0e40\u0e1b\u0e47\u0e19\u0e1c\u0e39\u0e49\u0e19\u0e33 datacenter networking ($2B+ rev); \u0e41\u0e15\u0e48 combined chair",c:"SEC ARS/StockTitan 2025-26"},
+  cfo:{s:7,t:"Chantelle Breithaupt \u2014 CFO \u0e15\u0e31\u0e49\u0e07\u0e41\u0e15\u0e48 \u0e01.\u0e1e. 2024, execution \u0e14\u0e35; tenure ~2 \u0e1b\u0e35",c:"BusinessWire/SEC 2024-26"},
+  guide:{s:8,t:"outlook \u0e0a\u0e31\u0e14, beat \u0e15\u0e48\u0e2d\u0e40\u0e19\u0e37\u0e48\u0e2d\u0e07, \u0e42\u0e15+\u0e01\u0e33\u0e44\u0e23\u0e41\u0e02\u0e47\u0e07",c:"StockTitan May-2025"},
+  transp:{s:7,t:"disclosure \u0e25\u0e30\u0e40\u0e2d\u0e35\u0e22\u0e14 + clawback; \u0e41\u0e15\u0e48\u0e21\u0e35 HSR tax gross-up (flag)",c:"fintool Nov-2025"},
+  capalloc:{s:8,t:"buyback $1.5B + FCF \u0e41\u0e02\u0e47\u0e07; \u0e44\u0e21\u0e48\u0e21\u0e35\u0e1b\u0e31\u0e19\u0e1c\u0e25 (\u0e40\u0e2b\u0e21\u0e32\u0e30 growth)",c:"StockTitan May-2025"},
+  ma:{s:"N/A",t:"\u0e2a\u0e48\u0e27\u0e19\u0e43\u0e2b\u0e0d\u0e48 organic; tuck-in \u0e40\u0e25\u0e47\u0e01 \u2014 \u0e44\u0e21\u0e48\u0e21\u0e35 M&A \u0e43\u0e2b\u0e0d\u0e48\u0e43\u0e2b\u0e49\u0e1b\u0e23\u0e30\u0e40\u0e21\u0e34\u0e19",c:"N/A"},
+  buyback:{s:8,t:"buyback $1.5B authorization (2025)",c:"StockTitan May-2025"},
+  dilution:{s:6,t:"PRSU/SBC \u0e1e\u0e2d\u0e04\u0e27\u0e23, buyback \u0e0a\u0e14\u0e40\u0e0a\u0e22",c:"financials"},
+  insider:{s:6,t:"Ullal \u0e16\u0e37\u0e2d 2.99% \u0e1c\u0e48\u0e32\u0e19 trust (aligned) \u0e41\u0e15\u0e48\u0e02\u0e32\u0e22 10b5-1 \u0e2b\u0e19\u0e31\u0e01 (\u0e25\u0e14 direct stake ~92%); CFO \u0e02\u0e32\u0e22",c:"DailyPolitical/fintool 2026"},
+  comp:{s:7,t:"CEO base \u0e15\u0e48\u0e33 $300K, equity 100% performance-based; \u0e41\u0e15\u0e48\u0e21\u0e35 HSR gross-up (flag)",c:"fintool Nov-2025"},
+  board:{s:6,t:"combined Chair/CEO; founder Ken Duda \u0e43\u0e19\u0e1a\u0e2d\u0e23\u0e4c\u0e14; clawback \u2014 \u0e41\u0e15\u0e48\u0e44\u0e21\u0e48\u0e21\u0e35 independent chair + HSR gross-up",c:"fintool/SEC 2025"},
+  comms:{s:7,t:"Ullal articulate, IR \u0e41\u0e02\u0e47\u0e07",c:"public record"}}}
+});
+
+function ldColor(x){ if(x==="N/A"||x==null) return "var(--faint)"; return x>=8?"var(--green)":x>=6?"#C9A961":x>=4?"var(--amber)":"var(--red)"; }
+/* ===== citation URLs: ticker -> dimension -> source link (clickable) ===== */
+const LURL={
+ NVDA:{ceo:"https://fortune.com/2026/03/12/jensen-huang-nvidia-4-million-bonus-compensation/",cfo:"https://www.finance-monthly.com/colette-kress-nvidia-cfo-billionaire/",guide:"https://fortune.com/article/nvidia-ceo-jensen-huang-pay-skyrocketed-stock-performance/",transp:"https://www.fool.com/investing/2026/05/20/nvidia-stock-investors-just-got-fantastic-news-fro/",capalloc:"https://www.ainvest.com/news/nvidia-share-sales-ceo-jensen-huang-signal-confidence-liquidity-2508/",buyback:"https://www.ainvest.com/news/nvidia-share-sales-ceo-jensen-huang-signal-confidence-liquidity-2508/",insider:"https://www.techi.com/nvidia-insider-selling/",comp:"https://fortune.com/article/nvidia-ceo-jensen-huang-pay-skyrocketed-stock-performance/"},
+ AVGO:{ceo:"https://valuesense.io/news/broadcom-ceo-compensation-surges-to-2053m-driven-by-equity",cfo:"https://simplywall.st/stocks/us/semiconductors/nasdaq-avgo/broadcom/management",transp:"https://www.gurufocus.com/news/8671097/broadcom-avgo-ceo-receives-2053m-compensation-amid-ai-focus",capalloc:"https://simplywall.st/stocks/us/semiconductors/nasdaq-avgo/broadcom/management",buyback:"https://simplywall.st/stocks/us/semiconductors/nasdaq-avgo/broadcom/management",dilution:"https://finance.yahoo.com/news/broadcom-ceo-pay-jumps-205-132515489.html",insider:"https://simplywall.st/stocks/us/semiconductors/nasdaq-avgo/broadcom/management",comp:"https://seekingalpha.com/news/4559930-ai-boom-drives-broadcom-ceo-hock-tans-2025-pay-package-to-2053m"},
+ TSM:{ceo:"https://www.ceotodaymagazine.com/2025/10/who-is-the-ceo-of-tsmc/",cfo:"https://247wallst.com/investing/2026/02/25/tsmc-raises-dividend-28-while-38-revenue-growth-reframes-the-geopolitical-risk/",guide:"https://247wallst.com/investing/2026/02/25/tsmc-raises-dividend-28-while-38-revenue-growth-reframes-the-geopolitical-risk/",transp:"https://www.sec.gov/Archives/edgar/data/0001046179/000104617925000054/tsm-boardx20250513x6k.htm",capalloc:"https://247wallst.com/investing/2026/02/25/tsmc-raises-dividend-28-while-38-revenue-growth-reframes-the-geopolitical-risk/",comp:"https://finance.biggo.com/news/ltS6mZ0BZk7xib5fRrSk",comms:"https://finance.yahoo.com/quote/TSMC.BA/earnings/TSMC.BA-Q4-2025-earnings_call-399056.html"},
+ MU:{ceo:"https://simplywall.st/stocks/us/semiconductors/nasdaq-mu/micron-technology/management",cfo:"https://bullfincher.io/companies/micron-technology/ceo-salary",guide:"https://simplywall.st/stocks/us/semiconductors/nasdaq-mu/micron-technology/management",capalloc:"https://www.sec.gov/Archives/edgar/data/723125/000104746919006745/a2240268zdef14a.htm",buyback:"https://www.sec.gov/Archives/edgar/data/723125/000104746919006745/a2240268zdef14a.htm",insider:"https://www.quiverquant.com/news/MICRON+TECHNOLOGY+INC+(%24MU)+CEO+2025+Pay+Revealed",comp:"https://www.quiverquant.com/news/MICRON+TECHNOLOGY+INC+(%24MU)+CEO+2025+Pay+Revealed",board:"https://www.sec.gov/Archives/edgar/data/0000723125/000110465925101237/tm2529116d1_ex99-1.htm"},
+ LLY:{ceo:"https://oncodaily.com/community/david-a-ricks-438930",cfo:"https://investor.lilly.com/news-releases/news-release-details/lilly-appoints-lucas-montarce-executive-vice-president-and-chief",guide:"https://www.sec.gov/Archives/edgar/data/0000059478/000005947825000107/lly-20250321.htm",transp:"https://www.sec.gov/Archives/edgar/data/0000059478/000005947825000107/lly-20250321.htm",capalloc:"https://www.ainvest.com/news/eli-lilly-ceo-compensation-blueprint-aligning-pharma-innovation-shareholder-2507/",comp:"https://www.fiercepharma.com/pharma/lilly-rewards-ceo-ricks-367m-pay-package-2025",board:"https://www.sec.gov/Archives/edgar/data/0000059478/000005947825000107/lly-20250321.htm"},
+ HOOD:{ceo:"https://markets.financialcontent.com/stocks/article/finterra-2026-2-12-from-meme-to-mainstream-a-2026-deep-dive-research-report-on-robinhood-markets-hood",cfo:"https://www.cfodive.com/news/robinhood-shares-slump-cfo-shakeup-earnings-crypto/804950/",transp:"https://markets.financialcontent.com/stocks/article/finterra-2026-2-12-from-meme-to-mainstream-a-2026-deep-dive-research-report-on-robinhood-markets-hood",insider:"https://www.linkedin.com/pulse/robinhood-markets-ipo-took-from-young-poor-gave-rich-warren-nagler",comp:"https://www.linkedin.com/pulse/robinhood-markets-ipo-took-from-young-poor-gave-rich-warren-nagler"},
+ GOOGL:{ceo:"https://businesschief.com/news/inside-googles-692m-pay-deal-for-ceo-sundar-pichai",cfo:"https://capital.com/en-int/analysis/alphabet-shareholder-who-owns-most-googl",transp:"https://www.sec.gov/Archives/edgar/data/0001652044/000130817926000344/goog014907-ars.pdf",capalloc:"https://www.sec.gov/Archives/edgar/data/0001652044/000130817926000344/goog014907-ars.pdf",ma:"https://www.sec.gov/Archives/edgar/data/0001652044/000165204425000027/googex99231825.htm",buyback:"https://www.sec.gov/Archives/edgar/data/0001652044/000130817926000344/goog014907-ars.pdf",dilution:"https://www.sec.gov/Archives/edgar/data/0001652044/000130817926000344/goog014907-ars.pdf",insider:"https://capital.com/en-int/analysis/alphabet-shareholder-who-owns-most-googl",comp:"https://www.entrepreneur.com/business-news/alphabet-google-ceo-sundar-pichai-earn-692-million-pay-package",board:"https://capital.com/en-int/analysis/alphabet-shareholder-who-owns-most-googl"},
+ ASML:{ceo:"https://www.financialcontent.com/article/finterra-2026-4-15-the-gatekeeper-of-the-ai-era-a-comprehensive-deep-dive-into-asml-holding-nv-2026-research-feature",cfo:"https://simplywall.st/stocks/us/semiconductors/otc-asml.f/asml-holding/management",guide:"https://ourbrand.asml.com/m/2c5d94d7b9619350/original/ASML-Results-Video-Transcript-Q4-and-FY-2025.pdf",transp:"https://www.financialcontent.com/article/finterra-2026-4-15-the-gatekeeper-of-the-ai-era-a-comprehensive-deep-dive-into-asml-holding-nv-2026-research-feature",capalloc:"https://ourbrand.asml.com/m/2c5d94d7b9619350/original/ASML-Results-Video-Transcript-Q4-and-FY-2025.pdf",ma:"https://nl.linkedin.com/in/christophe-fouquet-asml",buyback:"https://ourbrand.asml.com/m/2c5d94d7b9619350/original/ASML-Results-Video-Transcript-Q4-and-FY-2025.pdf",comp:"https://simplywall.st/stocks/us/semiconductors/otc-asml.f/asml-holding/management",board:"https://www.asml.com/en/company/governance/board-of-management"},
+ MRVL:{ceo:"https://fintool.com/app/research/companies/MRVL/people/matthew-j-murphy",cfo:"https://investor.marvell.com/news-events/press-releases/detail/1025/marvell-announces-cfo-transition",guide:"https://www.sec.gov/Archives/edgar/data/0001835632/000183563225000051/q425_8kx212025ex-991.htm",transp:"https://www.sec.gov/Archives/edgar/data/0001835632/000119312525113881/d920821dex991.htm",capalloc:"https://simplywall.st/stocks/us/semiconductors/nasdaq-mrvl/marvell-technology",ma:"https://simplywall.st/stocks/us/semiconductors/nasdaq-mrvl/marvell-technology",insider:"https://stocktwits.com/news-articles/markets/equity/mrvl-stock-inches-lower-premarket-outgoing-cfo-files-to-sell-65-m-shares/cZKWk9ZR7Em",comp:"https://fintool.com/app/research/companies/MRVL/people/matthew-j-murphy",board:"https://fintool.com/app/research/companies/MRVL/people/matthew-j-murphy",comms:"https://www.sec.gov/Archives/edgar/data/0001835632/000119312525113881/d920821dex991.htm"},
+ STX:{ceo:"https://blocksandfiles.com/2025/07/30/seagate-q4-2025/",cfo:"https://www.ainvest.com/news/seagate-data-deluge-cloud-demand-lifts-earnings-investors-hit-pause-rally-2507/",guide:"https://www.ainvest.com/news/seagate-strategic-positioning-ai-driven-data-storage-boom-2509/",transp:"https://finance.yahoo.com/news/seagate-technology-q2-earnings-call-234758913.html",capalloc:"https://www.ainvest.com/news/seagate-data-deluge-cloud-demand-lifts-earnings-investors-hit-pause-rally-2507/",buyback:"https://www.ainvest.com/news/seagate-data-deluge-cloud-demand-lifts-earnings-investors-hit-pause-rally-2507/",insider:"https://simplywall.st/stocks/us/tech/nasdaq-stx/seagate-technology-holdings/management",board:"https://blocksandfiles.com/2025/07/30/seagate-q4-2025/",comms:"https://finance.yahoo.com/news/seagate-technology-q2-earnings-call-234758913.html"},
+ ALAB:{ceo:"https://www.stocktitan.net/sec-filings/ALAB/def-14a-astera-labs-inc-definitive-proxy-statement-bca05e9be61f.html",cfo:"https://www.cnbc.com/2026/02/10/astera-labs-alab-earnings-report-q4-2025.html",guide:"https://www.cnbc.com/2026/02/10/astera-labs-alab-earnings-report-q4-2025.html",transp:"https://fintool.com/app/research/companies/ALAB/people/jitendra-mohan",dilution:"https://www.sec.gov/Archives/edgar/data/0001736297/000173629725000145/q325exhibit991.htm",insider:"https://www.stocktitan.net/sec-filings/ALAB/def-14a-astera-labs-inc-definitive-proxy-statement-bca05e9be61f.html",comp:"https://simplywall.st/stocks/mx/semiconductors/bmv-alab/astera-labs-shares/management",board:"https://fintool.com/app/research/companies/ALAB/people/jitendra-mohan",comms:"https://www.cnbc.com/2026/02/10/astera-labs-alab-earnings-report-q4-2025.html"},
+ IBKR:{ceo:"https://simplywall.st/stocks/us/diversified-financials/nasdaq-ibkr/interactive-brokers-group/management",cfo:"https://www.sec.gov/Archives/edgar/data/0001381197/000114036125007437/ny20035746x2_def14a.htm",transp:"https://fintool.com/app/research/companies/IBKR/people/thomas-peterffy",capalloc:"https://pestel-analysis.com/blogs/owners/interactivebrokers",buyback:"https://matrixbcg.com/blogs/owners/interactivebrokers",dilution:"https://fintool.com/app/research/companies/IBKR/people/thomas-peterffy",insider:"https://simplywall.st/stocks/us/diversified-financials/nasdaq-ibkr/interactive-brokers-group/management",comp:"https://www.sec.gov/Archives/edgar/data/0001381197/000114036125007437/ny20035746x2_def14a.htm",board:"https://matrixbcg.com/blogs/owners/interactivebrokers"},
+ ARM:{ceo:"https://www.bloomberg.com/news/articles/2026-04-21/softbank-taps-arm-ceo-for-bigger-role-in-masa-s-pivot-to-chips",transp:"https://www.sec.gov/Archives/edgar/data/0001973239/000197323925000035/armholdingsplcukannualre.htm",insider:"https://www.sec.gov/Archives/edgar/data/0001973239/000197323925000035/armholdingsplcukannualre.htm",board:"https://www.sec.gov/Archives/edgar/data/0001973239/000197323925000035/armholdingsplcukannualre.htm"},
+ ANET:{ceo:"https://www.sec.gov/Archives/edgar/data/1596532/000119312526158961/d65447dars.pdf",cfo:"https://www.businesswire.com/news/home/20231201183587/en/Arista-Networks-Appoints-New-CFO",guide:"https://www.stocktitan.net/news/ANET/arista-networks-inc-reports-first-quarter-2025-financial-ve7elaiapwwj.html",transp:"https://fintool.com/app/research/companies/ANET/people/jayshree-ullal",capalloc:"https://www.stocktitan.net/news/ANET/arista-networks-inc-reports-first-quarter-2025-financial-ve7elaiapwwj.html",buyback:"https://www.stocktitan.net/news/ANET/arista-networks-inc-reports-first-quarter-2025-financial-ve7elaiapwwj.html",insider:"https://www.dailypolitical.com/2026/04/16/arista-networks-nyseanet-cfo-chantelle-yvette-breithaupt-sells-8890-shares-of-stock.html",comp:"https://fintool.com/app/research/companies/ANET/people/jayshree-ullal",board:"https://fintool.com/app/research/companies/ANET/people/jayshree-ullal"}
+};
+
+function renderLeadership(d){
+  const L=LEADERSHIP2[d.t];
+  if(!L) return `<div class="lead12"><div class="label">\u2B22 Leadership Scorecard \u2014 12 \u0e21\u0e34\u0e15\u0e34</div><div class="l12-none">\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e44\u0e14\u0e49\u0e17\u0e33 scorecard \u0e15\u0e31\u0e27\u0e19\u0e35\u0e49 \u2014 \u0e44\u0e25\u0e48\u0e17\u0e33\u0e15\u0e32\u0e21 tier (S\u2192A\u2192B\u2192C\u2192D) \u00b7 \u0e15\u0e31\u0e27\u0e19\u0e35\u0e49 tier <b>${tierOf(alphaFor(d,'balanced'))}</b> \u00b7 \u0e2a\u0e48\u0e07 prompt \u0e40\u0e14\u0e34\u0e21\u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e17\u0e33 tier \u0e16\u0e31\u0e14\u0e44\u0e1b</div></div>`;
+  const own=LOWN[L.own]||{t:L.own,c:"var(--mute)"};
+  const rows=LDIMS.map(([k,lbl])=>{
+    const dim=L.d[k]||{s:"N/A",t:"N/A",c:"N/A"};
+    const sc=(dim.s==null)?"N/A":dim.s;
+    const _u=((typeof LURL!=='undefined'&&LURL[d.t])||{})[k];
+    const _cite=_u?`<a class="l12link" href="${_u}" target="_blank" rel="noopener">${dim.c} \u2197</a>`:dim.c;
+    return `<details class="l12row"><summary><span class="l12lbl">${lbl}</span><span class="l12chip" style="color:${ldColor(sc)};border-color:${ldColor(sc)}44">${sc==="N/A"?"N/A":sc+"/10"}</span></summary><div class="l12body"><div class="l12note">${dim.t}</div><div class="l12cite"><b>\u0e2d\u0e49\u0e32\u0e07\u0e2d\u0e34\u0e07:</b> ${_cite}</div></div></details>`;
+  }).join("");
+  return `<div class="lead12"><div class="label">\u2B22 Leadership Scorecard \u2014 12 \u0e21\u0e34\u0e15\u0e34 (\u0e04\u0e25\u0e34\u0e01\u0e01\u0e32\u0e07\u0e17\u0e35\u0e25\u0e30\u0e21\u0e34\u0e15\u0e34)</div><div class="l12own">Acts like long-term owner: <b style="color:${own.c}">${L.own}</b> \u2014 ${own.t}</div>${rows}</div>`;
+}
+
+/* =========================================================
+   FORENSIC LAYER — Red Flag Detector + Leadership
+   Severity scale 1..10 (10 = worst). lead 1..10 (10 = best owner-operator).
+   v:1 = web-verified w/ real citation. v:0 = public-record/financials (knowledge-based).
+   rep: GOOD | MIXED | BAD | SPEC
+   flag categories: Revenue, Margins, Cash Flow, Debt, Dilution, Insider,
+                    Customer, Accounting, Legal, Management
+   ========================================================= */
+const FORENSIC={
+ NVDA:{rep:"GOOD",lead:9,v:0,note:"Founder-led (Jensen Huang), elite execution; watch hyperscaler customer concentration + China export controls.",cite:"public record / financials",flags:[{c:"Customer",s:4,w:"Top hyperscalers = large share of data-center revenue"},{c:"Legal",s:3,w:"US/China export-control overhang on H-series"}]},
+ GOOGL:{rep:"GOOD",lead:8,v:0,note:"Founder super-voting control; cash machine, but live antitrust remedies.",cite:"DOJ search-monopoly ruling 2024 + ad-tech case (public record)",flags:[{c:"Legal",s:6,w:"DOJ monopoly ruling (search) + ad-tech case, remedies pending"},{c:"Management",s:3,w:"Dual-class: founders keep voting control"}]},
+ AAPL:{rep:"GOOD",lead:8,v:0,note:"Cook-era capital-return machine; App Store + China are the two soft spots.",cite:"EU DMA / antitrust (public record)",flags:[{c:"Legal",s:4,w:"App Store antitrust + EU DMA pressure on fees"},{c:"Customer",s:3,w:"China = supply + demand concentration"}]},
+ MSFT:{rep:"GOOD",lead:9,v:0,note:"Nadella governance is best-in-class; OpenAI exposure the main wildcard.",cite:"public record",flags:[{c:"Legal",s:2,w:"Mild antitrust scrutiny (Activision/OpenAI)"}]},
+ AMZN:{rep:"GOOD",lead:8,v:0,note:"Founder-influenced (Bezos chair); FTC antitrust suit + thin retail margin.",cite:"FTC v. Amazon 2023 (public record)",flags:[{c:"Legal",s:4,w:"FTC antitrust suit ongoing"},{c:"Margins",s:3,w:"Retail margin thin; profit leans on AWS"}]},
+ META:{rep:"MIXED",lead:7,v:0,note:"Zuckerberg total voting control; Reality Labs is a money furnace.",cite:"public record / financials",flags:[{c:"Management",s:5,w:"Super-voting: Zuckerberg controls votes, board weak check"},{c:"Cash Flow",s:4,w:"Reality Labs ~$45B+ cumulative operating losses"},{c:"Legal",s:4,w:"FTC antitrust + privacy-fine history"}]},
+ AVGO:{rep:"GOOD",lead:8,v:0,note:"Hock Tan = ruthless serial acquirer; debt + acquisition accounting are the watch-items.",cite:"VMware deal (public record)",flags:[{c:"Debt",s:4,w:"Leverage stacked from VMware/serial M&A"},{c:"Accounting",s:3,w:"Heavy acquisition adjustments / SBC in non-GAAP"}]},
+ BRK:{rep:"GOOD",lead:10,v:0,note:"Gold-standard governance (Buffett→Abel); succession is the only real flag.",cite:"public record",flags:[{c:"Management",s:2,w:"Post-Buffett succession transition"}]},
+ "BRK.B":{rep:"GOOD",lead:10,v:0,note:"Gold-standard governance (Buffett→Abel); succession is the only real flag.",cite:"public record",flags:[{c:"Management",s:2,w:"Post-Buffett succession transition"}]},
+ TSLA:{rep:"MIXED",lead:5,v:0,note:"Visionary but governance-light: pay fight, key-man risk, related-party history.",cite:"Musk $56B pay voided by Delaware then re-approved; SolarCity deal (public record)",flags:[{c:"Management",s:7,w:"Musk $56B package litigated; key-man + attention split across firms"},{c:"Legal",s:4,w:"SolarCity related-party + autopilot/robotaxi claims scrutiny"},{c:"Revenue",s:3,w:"Auto demand softening; valuation priced on robotaxi optionality"}]},
+ LLY:{rep:"GOOD",lead:8,v:0,note:"Strong steward; risk is valuation + GLP-1 pipeline concentration, not governance.",cite:"financials",flags:[{c:"Margins",s:2,w:"Premium multiple leaves no margin of safety"}]},
+ V:{rep:"GOOD",lead:9,v:0,note:"Toll-road economics; only nag is swipe-fee regulation.",cite:"public record",flags:[{c:"Legal",s:3,w:"Interchange/antitrust regulatory pressure"}]},
+ MA:{rep:"GOOD",lead:9,v:0,note:"Toll-road economics; swipe-fee regulation the lone overhang.",cite:"public record",flags:[{c:"Legal",s:3,w:"Interchange/antitrust regulatory pressure"}]},
+ JPM:{rep:"GOOD",lead:9,v:0,note:"Dimon-era best-in-class bank; routine regulatory fines come with the territory.",cite:"public record",flags:[{c:"Legal",s:2,w:"Periodic regulatory settlements (industry norm)"}]},
+ COST:{rep:"GOOD",lead:9,v:0,note:"Exemplary operator + culture; the only issue is the price you pay.",cite:"financials",flags:[{c:"Margins",s:2,w:"~50x P/E vs 3% net margin = priced for perfection"}]},
+ JNJ:{rep:"MIXED",lead:7,v:0,note:"AAA balance sheet, but talc litigation + 'Texas two-step' hangs over it.",cite:"talc MDL / bankruptcy maneuvers (public record)",flags:[{c:"Legal",s:6,w:"Tens of thousands of talc suits; contested bankruptcy maneuvers"}]},
+ ABBV:{rep:"MIXED",lead:6,v:0,note:"Humira patent-thicket reputation; high debt, post-Humira cliff to manage.",cite:"financials / public record",flags:[{c:"Debt",s:5,w:"Leverage high post-Allergan"},{c:"Legal",s:4,w:"Patent-thicket litigation reputation on Humira"}]},
+ PFE:{rep:"MIXED",lead:5,v:0,note:"Post-COVID air-pocket; capital allocation (Seagen) + pipeline doubts.",cite:"financials",flags:[{c:"Revenue",s:5,w:"COVID-revenue cliff; declining top line"},{c:"Debt",s:3,w:"Seagen acquisition added leverage"}]},
+ UNH:{rep:"BAD",lead:5,v:1,note:"Under DOJ criminal Medicare probe; CEO ousted, guidance pulled, -55% from high.",cite:"DOJ criminal Medicare-Advantage probe (WSJ, May-2025); CEO Witty exit; FY25 reported Jan-2026 (CNBC/CNN)",flags:[{c:"Legal",s:9,w:"DOJ criminal Medicare-Advantage probe + SEC/IRS/DOL inquiries"},{c:"Management",s:6,w:"Abrupt CEO change (Witty→Hemsley) = board lost confidence"},{c:"Revenue",s:4,w:"2025 guidance withdrawn; 2026 guided to revenue DECLINE"}]},
+ SMCI:{rep:"BAD",lead:3,v:1,note:"Auditor EY quit 'unwilling to be associated'; Hindenburg short, DOJ probe, near-delisting.",cite:"EY resignation Oct-2024 (CNBC); Hindenburg short; refiled Feb-2025, Nasdaq compliance regained but governance discount lingers (Times-Online Jan-2026)",flags:[{c:"Accounting",s:9,w:"EY resigned citing internal-controls/board-independence; refiled late 10-K"},{c:"Legal",s:7,w:"Federal investigation; 2nd accounting episode in a decade"},{c:"Management",s:6,w:"Board independence from CEO Liang questioned by auditor"}]},
+ INTC:{rep:"MIXED",lead:5,v:1,note:"Dividend suspended, foundry bleeding; US government took ~10% equity to prop it up.",cite:"Dividend cut; foundry operating losses; US-gov equity stake + SoftBank $23/sh; CEO Tan Mar-2025 (SEC 8-K 2025)",flags:[{c:"Cash Flow",s:6,w:"Foundry operating losses; dividend suspended = distress signal"},{c:"Management",s:4,w:"Serial strategic misses (mobile, AI); 3rd CEO in years"},{c:"Dilution",s:4,w:"Government + SoftBank stakes dilute existing holders"}]},
+ BA:{rep:"MIXED",lead:6,v:1,note:"Negative equity, ~$50B debt, years of cash burn — but Ortberg turnaround is real.",cite:"Negative shareholders' equity; ~$50B debt; ~$36B cumulative FCF burn; FCF turned +$0.2B Q3-25; 737-MAX door-plug (CNBC/AInvest 2025)",flags:[{c:"Debt",s:8,w:"~$50B debt + negative shareholders' equity"},{c:"Cash Flow",s:6,w:"~$36B cumulative FCF burn; only just turned positive"},{c:"Legal",s:6,w:"737-MAX safety/quality scrutiny, FAA production caps"}]},
+ DVA:{rep:"MIXED",lead:6,v:1,note:"Serial DOJ-settlement history + 2025 ransomware breach — but Berkshire owns ~45%.",cite:"DOJ settlements $350M(2014)+$450M(2015)+$34M(2024) + Corporate Integrity Agreement; 2025 cyberattack class action; Berkshire ~45% (DOJ/HealthcareDive)",flags:[{c:"Legal",s:7,w:"Repeat anti-kickback/Medicare settlements; under DOJ monitoring (CIA)"},{c:"Debt",s:5,w:"Levered balance sheet funding aggressive buybacks"},{c:"Accounting",s:3,w:"Heavy buyback shrinks share count → flatters EPS"}]},
+ NVO:{rep:"MIXED",lead:5,v:1,note:"Guidance cut twice in 2025, CEO change, CagriSema phase-3 miss — credibility dinged.",cite:"2025 guidance cut x2; CEO Jørgensen→Doustdar; CagriSema failed non-inferiority vs Lilly Feb-2026; -50% (CNBC/Qz 2025-26)",flags:[{c:"Management",s:6,w:"Two guidance cuts + CEO ouster in one year = poor visibility"},{c:"Revenue",s:5,w:"2026 guided to sales/profit DECLINE; Ozempic price erosion"},{c:"Customer",s:3,w:"Revenue concentrated in GLP-1 franchise"}]},
+ BABA:{rep:"MIXED",lead:5,v:0,note:"VIE structure — you own a Cayman contract, not equity; China-regulatory hostage.",cite:"VIE/Cayman-shell structure; China crackdown (Ma 2020); ADR delisting tail-risk (public record)",flags:[{c:"Management",s:6,w:"VIE: foreign holders own a contract over a shell, not the assets"},{c:"Legal",s:5,w:"China regulatory + US ADR delisting tail-risk"}]},
+ TCEHY:{rep:"MIXED",lead:6,v:0,note:"Same VIE/ADR caveat as BABA, but cleaner cash generation + buybacks.",cite:"VIE/ADR structure; China regulatory (public record)",flags:[{c:"Management",s:5,w:"VIE structure + pink-sheet ADR liquidity"},{c:"Legal",s:4,w:"China regulatory overhang"}]},
+ MU:{rep:"MIXED",lead:6,v:0,note:"Decent governance, but these are peak-cycle memory earnings — cyclicality is the flag.",cite:"financials",flags:[{c:"Revenue",s:5,w:"Memory super-cycle: current earnings near peak, +1000% in a year"}]},
+ DELL:{rep:"GOOD",lead:7,v:0,note:"Michael-Dell-controlled, disciplined, but low-margin hardware + high debt.",cite:"financials",flags:[{c:"Debt",s:4,w:"High debt / thin equity post-EMC; ROE flattered by leverage"},{c:"Margins",s:3,w:"Hardware net margin ~4%"}]},
+ PLTR:{rep:"MIXED",lead:6,v:0,note:"Real product, but heavy SBC dilution, nosebleed multiple, routine insider sales.",cite:"SBC dilution; insider sales (Thiel/Karp 10b5-1); gov-contract concentration (financials/public record)",flags:[{c:"Dilution",s:5,w:"Stock-based comp materially dilutes shareholders"},{c:"Insider",s:4,w:"Steady insider selling (founders/execs)"},{c:"Customer",s:3,w:"Government + few large commercial accounts concentration"}]},
+ CRWV:{rep:"SPEC",lead:4,v:1,note:"~67% revenue from Microsoft, $21B debt, ~⅓ of revenue eaten by interest, insiders selling.",cite:"67% rev Microsoft; $21B debt (~11% var rate); Q4 interest $388M ~⅓ rev; post-lockup insider selling; net loss (10-K Mar-2026, Kerrisdale/Seeking Alpha)",flags:[{c:"Customer",s:9,w:"~67% of revenue from a single client (Microsoft)"},{c:"Debt",s:9,w:"$21B debt, ~11% variable rate; interest ≈ one-third of revenue"},{c:"Insider",s:5,w:"Post-lockup insider selling; small float"},{c:"Cash Flow",s:7,w:"Net loss; not FCF-positive despite scale"}]},
+ HOOD:{rep:"MIXED",lead:5,v:0,note:"PFOF model = regulatory target; meme/GME history, prior SEC/FINRA settlements.",cite:"PFOF regulatory risk; 2021 GME outage; SEC/FINRA settlements (public record)",flags:[{c:"Legal",s:5,w:"Payment-for-order-flow regulatory risk + past settlements"},{c:"Revenue",s:4,w:"Revenue swings with crypto/retail speculation cycle"}]},
+ RBLX:{rep:"SPEC",lead:5,v:0,note:"Persistent GAAP losses; bookings-vs-revenue optics, heavy SBC.",cite:"financials",flags:[{c:"Cash Flow",s:5,w:"Chronic GAAP net losses"},{c:"Accounting",s:4,w:"Bookings/deferred-revenue presentation flatters headline growth"},{c:"Dilution",s:4,w:"Elevated stock-based comp"}]},
+ DKNG:{rep:"SPEC",lead:5,v:0,note:"Still GAAP-unprofitable; promotional spend + state-by-state regulatory drag.",cite:"financials",flags:[{c:"Cash Flow",s:4,w:"GAAP losses; profitability still pending"},{c:"Legal",s:3,w:"Patchwork state gaming regulation"}]},
+ LYFT:{rep:"MIXED",lead:5,v:0,note:"Perennial #2 to Uber; thin economics, history of optimistic metric framing.",cite:"financials",flags:[{c:"Margins",s:3,w:"Distant #2; thin structural margin"},{c:"Dilution",s:3,w:"SBC a large share of profitability"}]},
+ EQIX:{rep:"GOOD",lead:7,v:0,note:"Quality DC REIT; prior short-seller AFFO-accounting allegation worth noting.",cite:"2023 short-seller AFFO/accounting allegation (public record)",flags:[{c:"Accounting",s:4,w:"Short-seller alleged AFFO/maintenance-capex classification (disputed)"},{c:"Debt",s:3,w:"REIT structurally debt-funded"}]},
+ GEV:{rep:"GOOD",lead:7,v:0,note:"Grid super-cycle winner, but margins/FCF only recently inflected; rich multiple.",cite:"financials",flags:[{c:"Margins",s:3,w:"Thin/just-inflected margins vs ~50x P/E"}]},
+ SPCX:{rep:"SPEC",lead:7,v:0,note:"Pre-IPO proxy: Musk execution but private/opaque financials, negative reported margin.",cite:"private-company proxy (limited disclosure)",flags:[{c:"Accounting",s:5,w:"Private: limited audited disclosure for public holders"},{c:"Cash Flow",s:4,w:"Heavy capex/launch burn vs disclosed revenue"}]},
+ SBUX:{rep:"MIXED",lead:6,v:0,note:"Turnaround under new leadership; union friction + China softness.",cite:"financials / public record",flags:[{c:"Revenue",s:3,w:"Same-store softness; turnaround unproven"},{c:"Debt",s:3,w:"Negative equity from buybacks/leverage"}]},
+ NKE:{rep:"MIXED",lead:6,v:0,note:"Brand intact but DTC-pivot misstep; turnaround in progress.",cite:"financials",flags:[{c:"Revenue",s:4,w:"Revenue decline post-DTC overreach"}]},
+ BE:{rep:"SPEC",lead:4,v:0,note:"Chronic losses + cash burn; serial dilution to fund itself.",cite:"financials",flags:[{c:"Cash Flow",s:7,w:"Persistent negative FCF/net margin"},{c:"Dilution",s:6,w:"Repeat equity/convert raises"}]},
+ RKLB:{rep:"SPEC",lead:5,v:0,note:"Credible #2 launcher but pre-profit, cash-burning, dilutive.",cite:"financials",flags:[{c:"Cash Flow",s:6,w:"Negative margins; Neutron pre-revenue"},{c:"Dilution",s:5,w:"Equity raises to fund development"}]},
+ ASTS:{rep:"SPEC",lead:4,v:0,note:"Essentially pre-revenue; binary tech bet funded by serial dilution.",cite:"financials",flags:[{c:"Revenue",s:7,w:"Pre-commercial: negligible revenue"},{c:"Dilution",s:7,w:"Repeated capital raises; going-concern sensitivity"},{c:"Cash Flow",s:7,w:"Deep cash burn"}]},
+ OKLO:{rep:"SPEC",lead:4,v:0,note:"Pre-revenue SMR concept; no product yet, funded by dilution.",cite:"financials",flags:[{c:"Revenue",s:8,w:"No commercial reactor/revenue yet"},{c:"Cash Flow",s:7,w:"Pure cash burn; first deployment years out"},{c:"Dilution",s:6,w:"Equity-funded development"}]},
+ ARM:{rep:"GOOD",lead:7,v:0,note:"Dominant IP, but SoftBank ~90% control = tiny float + governance overhang.",cite:"public record / financials",flags:[{c:"Management",s:5,w:"SoftBank controls ~90%; minority float"},{c:"Margins",s:3,w:"~80-100x P/E vs current earnings"}]},
+ ORCL:{rep:"GOOD",lead:7,v:0,note:"Ellison-controlled; OCI growth real but RPO-backed guidance + heavy debt.",cite:"financials",flags:[{c:"Debt",s:5,w:"High debt; negative-to-thin equity from buybacks"},{c:"Accounting",s:3,w:"Backlog/RPO-driven guidance leans forward"}]},
+ CRM:{rep:"GOOD",lead:6,v:0,note:"Cheaper now; SBC dilution + acquisition-led growth the historical knocks.",cite:"financials",flags:[{c:"Dilution",s:4,w:"Elevated stock-based comp"},{c:"Accounting",s:2,w:"Non-GAAP vs GAAP gap from SBC/M&A"}]},
+ SNDK:{rep:"SPEC",lead:5,v:0,note:"Just spun from WDC; cyclical NAND, thin standalone track record.",cite:"financials (recent spin-off)",flags:[{c:"Revenue",s:4,w:"Cyclical NAND pricing; short standalone history"}]}
+};
+
+/* computed red flags straight from the financial fields (works for all names) */
+function computeFlags(d){
+  const F=[];
+  if(d.fm!=null&&d.fm<0) F.push({c:"Cash Flow",s:Math.max(5,Math.min(10,Math.round(5+Math.abs(d.fm)/12))),w:`FCF margin ${d.fm}% — เผาเงินสด`});
+  else if(d.fy!=null&&d.fy<0) F.push({c:"Cash Flow",s:5,w:`FCF yield ${d.fy}% — กระแสเงินสดติดลบ`});
+  if(d.de!=null&&d.de>=5) F.push({c:"Debt",s:8,w:`Debt/Equity ${d.de} — เลเวอเรจสูงมาก`});
+  else if(d.de!=null&&d.de>=3) F.push({c:"Debt",s:5,w:`Debt/Equity ${d.de} — หนี้สูง`});
+  if(d.nm!=null&&d.nm<0) F.push({c:"Margins",s:Math.max(6,Math.min(10,Math.round(6+Math.abs(d.nm)/20))),w:`Net margin ${d.nm}% — ขาดทุนสุทธิ`});
+  else if(d.nm!=null&&d.nm<3) F.push({c:"Margins",s:3,w:`Net margin บาง ${d.nm}%`});
+  if(d.pe>=100) F.push({c:"Valuation",s:7,w:`P/E ${d.pe}x — แพงมาก ไม่มี margin of safety`});
+  else if(d.pe>=50) F.push({c:"Valuation",s:4,w:`P/E ${d.pe}x — แพง`});
+  if(d.d52<=-40) F.push({c:"Price action",s:5,w:`ร่วง ${d.d52}% จาก 52WH — ตลาดส่งสัญญาณ fundamental เสื่อม`});
+  else if(d.d52<=-30) F.push({c:"Price action",s:3,w:`ร่วง ${d.d52}% จาก 52WH`});
+  if(d.cr!=null&&d.cr<1) F.push({c:"Liquidity",s:4,w:`Current ratio ${d.cr} — สภาพคล่องตึง`});
+  if(d.rg5!=null&&d.rg5<3) F.push({c:"Revenue",s:3,w:`รายได้โต ${d.rg5}%/yr — เกือบนิ่ง`});
+  else if(d.rg5!=null&&d.rg3!=null&&d.rg3<d.rg5-6) F.push({c:"Revenue",s:3,w:`รายได้ชะลอ (3Y ${d.rg3}% < 5Y ${d.rg5}%)`});
+  if(d.roe!=null&&d.roe<6&&d.nm>=0) F.push({c:"Capital returns",s:3,w:`ROE ${d.roe}% — return on capital อ่อน`});
+  return F;
+}
+
+/* merge qualitative DB + computed → composite 1..10 (10 = worst) */
+function redFlag(d){
+  const q=FORENSIC[d.t]||null;
+  const comp=computeFlags(d);
+  const qf=(q&&q.flags)?q.flags:[];
+  // de-dup categories: keep higher severity
+  const map={};
+  [...qf,...comp].forEach(f=>{ if(!map[f.c]||f.s>map[f.c].s) map[f.c]=f; });
+  const flags=Object.values(map).sort((a,b)=>b.s-a.s);
+  const sev=flags.map(f=>f.s);
+  let score;
+  if(!sev.length) score=1;
+  else score=Math.max(1,Math.min(10,Math.round(sev[0]*0.7+(sev[1]||0)*0.2+Math.min(sev.length,8)*0.25)));
+  const rep=q?q.rep:(d.nm<0||d.pe>=100?"SPEC":"NR");
+  const lead=q?q.lead:leadProxy(d);
+  const note=q?q.note:"ไม่พบ red flag สาธารณะที่เด่น — ประเมินจากงบล้วน (knowledge LOW)";
+  const cite=q?q.cite:"assessed from embedded financials only";
+  const v=q?q.v:0;
+  return {score,flags,rep,lead,note,cite,v};
+}
+function leadProxy(d){
+  let s=6;
+  if(d.fm!=null&&d.fm>=15)s++;
+  if(d.de!=null&&d.de<=0.5)s++;
+  if(d.nm!=null&&d.nm<0)s-=2;
+  if(d.pe>=100)s--;
+  if(d.roe!=null&&d.roe>=25&&d.nm>0)s++;
+  return Math.max(1,Math.min(10,s));
+}
+function rfColor(s){ return s>=8?"var(--red)":s>=6?"var(--amber)":s>=4?"#C9A961":"var(--green)"; }
+function repColor(r){ return r==="GOOD"?"var(--green)":r==="BAD"?"var(--red)":r==="SPEC"?"var(--amber)":r==="MIXED"?"#C9A961":"var(--mute)"; }
+function leadColor(s){ return s>=8?"var(--green)":s>=6?"#C9A961":s>=4?"var(--amber)":"var(--red)"; }
+
+
+/* ===== origin labels ===== */
+const ORIG={CV:"Conviction 20",TR:"Trump list",AI:"AI-Infra",PL:"Pelosi"};
+
+/* ===== 3-layer history (price back-cast from real returns; margin/PE illustrative) ===== */
+function buildHist(d){
+  const px=d.px;
+  const back=r=>(r==null||r<=-99)?null:+(px/(1+r/100));
+  const p5=back(d.r5y),p3=back(d.r3y),p1=back(d.r1y),p0=px;
+  const geo=(a,b)=>(a==null||b==null)?null:Math.sqrt(a*b);
+  const price=[p5,geo(p5,p3),p3,geo(p3,p1),p1,p0];
+  const nm=d.nm==null?0:d.nm;
+  const nmStart=(d.rg5!=null&&d.rg5>=15)?nm*0.55:(nm<=0?nm*1.4:nm*0.82);
+  const lin=(a,b,i)=>a+(b-a)*(i/5);
+  const margin=[0,1,2,3,4,5].map(i=>Math.max(-60,Math.min(80,+lin(nmStart,nm,i).toFixed(1))));
+  const pe=Math.min(d.pe,140),pe3=Math.min(d.pe3,140);
+  const peArr=[pe3*1.08,pe3*1.02,pe3,(pe3+pe)/2,(pe3*0.4+pe*0.6),pe].map(v=>+Math.min(140,Math.max(0,v)).toFixed(1));
+  return {labels:["5Y","4Y","3Y","2Y","1Y","Now"],price,margin,pe:peArr};
+}
+let _histChart=null;
+function renderHistChart(d){
+  const cv=document.getElementById("histChart");if(!cv)return;
+  const note=document.getElementById("chartNote");
+  if(typeof Chart==="undefined"){if(note)note.innerHTML="\u26a0 \u0e42\u0e2b\u0e25\u0e14 Chart.js \u0e44\u0e21\u0e48\u0e44\u0e14\u0e49 (\u0e2d\u0e2d\u0e1f\u0e44\u0e25\u0e19\u0e4c) \u2014 \u0e14\u0e32\u0e27\u0e19\u0e4c\u0e42\u0e2b\u0e25\u0e14\u0e44\u0e1f\u0e25\u0e4c\u0e41\u0e25\u0e49\u0e27\u0e40\u0e1b\u0e34\u0e14\u0e2d\u0e2d\u0e19\u0e44\u0e25\u0e19\u0e4c\u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e14\u0e39\u0e01\u0e23\u0e32\u0e1f";return;}
+  const h=buildHist(d);
+  if(_histChart){_histChart.destroy();_histChart=null;}
+  _histChart=new Chart(cv,{type:"line",
+    data:{labels:h.labels,datasets:[
+      {label:"Price $",data:h.price,borderColor:"#C9A961",backgroundColor:"transparent",yAxisID:"y",tension:.35,borderWidth:2,pointRadius:2,spanGaps:true},
+      {label:"Net Margin %",data:h.margin,borderColor:"#4FA877",backgroundColor:"transparent",yAxisID:"y1",tension:.35,borderWidth:1.5,pointRadius:0,borderDash:[4,3]},
+      {label:"P/E",data:h.pe,borderColor:"#7CA5C9",backgroundColor:"transparent",yAxisID:"y2",tension:.35,borderWidth:1.5,pointRadius:0,borderDash:[2,2]}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
+      plugins:{legend:{display:true,labels:{color:"#8A8178",font:{size:10,family:"JetBrains Mono"},boxWidth:10,padding:12}},
+        tooltip:{backgroundColor:"#161412",borderColor:"#3A3631",borderWidth:1,titleColor:"#C9A961",bodyColor:"#E8E4DD",padding:8,
+          callbacks:{label:c=>{const v=c.raw;if(v==null)return c.dataset.label+" n/a";if(c.datasetIndex===0)return "Price $"+(v>=100?v.toFixed(0):v.toFixed(2));if(c.datasetIndex===1)return "Net Mgn "+v+"%";return "P/E "+v+"x";}}}},
+      scales:{x:{grid:{display:false},ticks:{color:"#5A544C",font:{size:9}}},
+        y:{position:"left",grid:{color:"#1c1814"},ticks:{color:"#8A7544",font:{size:9},maxTicksLimit:5,callback:v=>"$"+v}},
+        y1:{position:"right",grid:{display:false},ticks:{color:"#4FA877",font:{size:9},maxTicksLimit:5,callback:v=>v+"%"}},
+        y2:{position:"right",display:false,grid:{display:false}}
+      }}});
+  if(note)note.innerHTML=`\u0e40\u0e2a\u0e49\u0e19\u0e17\u0e2d\u0e07 = \u0e23\u0e32\u0e04\u0e32 (back-cast \u0e08\u0e32\u0e01 return \u0e08\u0e23\u0e34\u0e07 1Y/3Y/5Y) \u00b7 \u0e40\u0e02\u0e35\u0e22\u0e27 = net margin% \u00b7 \u0e1f\u0e49\u0e32 = P/E \u2014 <b>margin/PE \u0e40\u0e1b\u0e47\u0e19 trajectory \u0e1b\u0e23\u0e30\u0e21\u0e32\u0e13\u0e01\u0e32\u0e23 anchored</b> (\u0e44\u0e21\u0e48\u0e43\u0e0a\u0e48\u0e04\u0e48\u0e32\u0e23\u0e32\u0e22\u0e44\u0e15\u0e23\u0e21\u0e32\u0e2a\u0e08\u0e23\u0e34\u0e07) \u00b7 source: ${ORIG[d.o]||"core"}${d._live?' \u00b7 <span style="color:var(--green)">\u25c9 \u0e23\u0e32\u0e04\u0e32\u0e2a\u0e14</span>':''}`;
+}
+
+/* ===== FINNHUB live feed ===== */
+const FINN={key:"",on:false,auto:false,timer:null,busy:false};
+window.FINN=FINN;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function finnStatus(msg,cls){const s=document.getElementById("finnStatus");if(s){s.textContent=msg;s.className="lb-status"+(cls?" "+cls:"");}}
+(async()=>{try{const r=await window.storage.get("finnhub_key");if(r&&r.value){FINN.key=r.value;const i=document.getElementById("finnKey");if(i)i.value=r.value;finnStatus("\u0e21\u0e35 key \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e44\u0e27\u0e49 \u2014 \u0e01\u0e14 \u0e40\u0e0a\u0e37\u0e48\u0e2d\u0e21\u0e15\u0e48\u0e2d \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e14\u0e36\u0e07\u0e23\u0e32\u0e04\u0e32\u0e2a\u0e14");}}catch(e){}})();
+async function fetchQuoteLive(t){
+  const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(t)}&token=${FINN.key}`);
+  if(!r.ok)throw new Error("http "+r.status);
+  const j=await r.json();
+  if(j&&typeof j.c==="number"&&j.c>0)return j;
+  throw new Error("no quote");
+}
+async function runLiveSweep(){
+  if(!FINN.key){finnStatus("\u0e43\u0e2a\u0e48 Finnhub API key \u0e01\u0e48\u0e2d\u0e19","err");return;}
+  if(FINN.busy)return;FINN.busy=true;
+  const tickers=RAW.map(d=>d.t);let ok=0,fail=0;
+  for(let i=0;i<tickers.length;i++){
+    const t=tickers[i],d=RAW.find(x=>x.t===t);
+    finnStatus(`\u0e01\u0e33\u0e25\u0e31\u0e07\u0e14\u0e36\u0e07\u0e23\u0e32\u0e04\u0e32\u0e2a\u0e14\u2026 ${i+1}/${tickers.length} (${t}) \u00b7 \u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08 ${ok}`,"live");
+    try{const q=await fetchQuoteLive(t);d.px=+(q.c.toFixed(2));if(d.hi){d.d52=+(((d.px/d.hi)-1)*100).toFixed(1);}d._live=true;ok++;}
+    catch(e){d._liveErr=true;fail++;}
+    await sleep(1100);
+  }
+  recompute();
+  const now=new Date().toLocaleTimeString();FINN.on=true;
+  if(ok===0){finnStatus("\u0e14\u0e36\u0e07\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14 \u2014 \u0e19\u0e48\u0e32\u0e08\u0e30\u0e15\u0e34\u0e14 sandbox/CORS \u0e43\u0e19\u0e15\u0e31\u0e27\u0e1e\u0e23\u0e35\u0e27\u0e34\u0e27 \u00b7 \u0e14\u0e32\u0e27\u0e19\u0e4c\u0e42\u0e2b\u0e25\u0e14\u0e44\u0e1f\u0e25\u0e4c\u0e41\u0e25\u0e49\u0e27\u0e40\u0e1b\u0e34\u0e14\u0e43\u0e19\u0e40\u0e1a\u0e23\u0e32\u0e27\u0e4c\u0e40\u0e0b\u0e2d\u0e23\u0e4c\u0e40\u0e2d\u0e07\u0e08\u0e30\u0e43\u0e0a\u0e49\u0e44\u0e14\u0e49\u0e40\u0e15\u0e47\u0e21","err");}
+  else{finnStatus(`\u2713 \u0e23\u0e32\u0e04\u0e32\u0e2a\u0e14\u0e2d\u0e31\u0e1b\u0e40\u0e14\u0e15 ${now} \u00b7 \u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08 ${ok}/${tickers.length}${fail?` \u00b7 \u0e1e\u0e25\u0e32\u0e14 ${fail}`:""}`,"okk");}
+  FINN.busy=false;render();
+}
+async function fetchMetricLive(d){
+  if(!FINN.on||!FINN.key)return;
+  try{
+    const r=await fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(d.t)}&metric=all&token=${FINN.key}`);
+    if(!r.ok)return;const j=await r.json();const m=j&&j.metric?j.metric:null;if(!m)return;
+    const pe=m.peTTM||m.peBasicExclExtraTTM||m.peExclExtraTTM;if(pe&&pe>0&&pe<2000)d.pe=+(+pe).toFixed(1);
+    const nm=(m.netProfitMarginTTM!=null?m.netProfitMarginTTM:m.netProfitMarginAnnual);if(nm!=null)d.nm=+(+nm).toFixed(1);
+    const hi=m["52WeekHigh"];if(hi&&hi>0){d.hi=+(+hi).toFixed(2);d.d52=+(((d.px/d.hi)-1)*100).toFixed(1);}
+    recompute();if(state.sel===d.t){drill(d.t);}render();
+  }catch(e){}
+}
+const _fc=document.getElementById("finnConnect");
+if(_fc)_fc.onclick=async()=>{
+  const k=document.getElementById("finnKey").value.trim();
+  if(!k){finnStatus("\u0e43\u0e2a\u0e48 Finnhub API key \u0e01\u0e48\u0e2d\u0e19 (free key \u0e08\u0e32\u0e01 finnhub.io)","err");return;}
+  FINN.key=k;try{await window.storage.set("finnhub_key",k);}catch(e){}
+  await runLiveSweep();
+};
+const _fr=document.getElementById("finnRefresh");
+if(_fr)_fr.onclick=()=>{if(!FINN.key){finnStatus("\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e44\u0e14\u0e49\u0e40\u0e0a\u0e37\u0e48\u0e2d\u0e21\u0e15\u0e48\u0e2d","err");return;}runLiveSweep();};
+const _fa=document.getElementById("finnAuto");
+if(_fa)_fa.onchange=e=>{
+  FINN.auto=e.target.checked;
+  if(FINN.timer){clearInterval(FINN.timer);FINN.timer=null;}
+  if(FINN.auto){FINN.timer=setInterval(()=>{if(FINN.key)runLiveSweep();},3600*1000);finnStatus("\u0e15\u0e31\u0e49\u0e07\u0e2d\u0e31\u0e1b\u0e40\u0e14\u0e15\u0e2d\u0e31\u0e15\u0e42\u0e19\u0e21\u0e31\u0e15\u0e34\u0e17\u0e38\u0e01 1 \u0e0a\u0e21. (\u0e15\u0e49\u0e2d\u0e07\u0e40\u0e1b\u0e34\u0e14\u0e41\u0e17\u0e47\u0e1a\u0e19\u0e35\u0e49\u0e04\u0e49\u0e32\u0e07\u0e44\u0e27\u0e49)","okk");}
+};
+
+
+// ticker tape (top 4 by balanced alpha)
+const top4=RAW.map(d=>({t:d.t,a:alphaFor(d,"balanced")})).sort((x,y)=>y.a-x.a).slice(0,4);
+$("tape").innerHTML="TOP ALPHA (GEAR+)<br>"+top4.map(o=>`${o.t} · ${o.a}`).join("<br>");
+
+render();
+</script>
+</body>
+</html>
